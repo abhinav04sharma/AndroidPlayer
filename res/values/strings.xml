@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">AndroidPlayer</string>
+    <string name="action_settings">Settings</string>
+    <string name="play">Pause</string>
+    <string name="skip">Skip </string>
+    <string name="currentSong"></string>
+    <string name="currentArtist"/>
+    <string name="currentGenre"/>
+
+</resources>
