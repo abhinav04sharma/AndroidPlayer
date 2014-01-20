@@ -1,6 +1,9 @@
 package com.androidplayer;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 import org.apache.commons.httpclient.URIException;
 import org.apache.commons.httpclient.util.URIUtil;
@@ -17,7 +20,11 @@ import android.os.Handler;
 import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
@@ -27,6 +34,8 @@ public class MainActivity extends Activity {
 
 	private static Button play;
 	private static Button skip;
+	private static Button prev;
+	private static Button listButton;
 
 	private static TextView currentSong;
 	private static TextView currentArtist;
@@ -35,6 +44,10 @@ public class MainActivity extends Activity {
 	private static SeekBar seekBar;
 	private static Handler seekHandler = new Handler();
 	private static Runnable run;
+
+	private static ListView listView;
+	private static ArrayAdapter<Song> adapter;
+	private static boolean showingList;
 
 	public static SongFactory songFactory = new SongFactory();
 	public static MediaPlayer player;
@@ -51,8 +64,9 @@ public class MainActivity extends Activity {
 		return null;
 	}
 
-	private void playSong(Song song) throws IllegalArgumentException,
-			SecurityException, IllegalStateException, IOException {
+	private void playSong(Song song, boolean start)
+			throws IllegalArgumentException, SecurityException,
+			IllegalStateException, IOException {
 		if (player != null) {
 			player.stop();
 		}
@@ -60,7 +74,9 @@ public class MainActivity extends Activity {
 		player = new MediaPlayer();
 		player.setDataSource(getURLFileName(song.getFileName()));
 		player.prepare();
-		player.start();
+		if (start) {
+			player.start();
+		}
 		player.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
 
 			@Override
@@ -82,57 +98,25 @@ public class MainActivity extends Activity {
 		seekHandler.postDelayed(run, 500);
 	}
 
-	// private void getSongList() {
-	// //your database elect statement
-	// String selection = MediaStore.Audio.Media.IS_MUSIC + " != 0";
-	// //your projection statement
-	// String[] projection = {
-	// MediaStore.Audio.Media._ID,
-	// MediaStore.Audio.Media.ARTIST,
-	// MediaStore.Audio.Media.TITLE,
-	// MediaStore.Audio.Media.DATA,
-	// MediaStore.Audio.Media.DISPLAY_NAME,
-	// MediaStore.Audio.Media.DURATION,
-	// MediaStore.Audio.Media.ALBUM
-	// };
-	// //query
-	// Cursor cursor = this.managedQuery(
-	// MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-	// projection,
-	// selection,
-	// null,
-	// null);
-	//
-	// cursor.moveToNext();
-	// Toast.makeText(context, cursor.getString(5),Toast.LENGTH_LONG);
-	// while(cursor.moveToNext()){
-	// songs.add(cursor.getString(0));
-	// songs.add(cursor.getString(1));
-	// songs.add(cursor.getString(2));
-	// songs.add(cursor.getString(3));
-	// songs.add(cursor.getString(4));
-	// songs.add(cursor.getString(5));
-	// album_id.add((long) cursor.getFloat(6));
-	// }
-	// }
-
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
 		if (!initialized) {
+			Song firstSong = songFactory.initialize(
+					Environment.getExternalStoragePublicDirectory(
+							Environment.DIRECTORY_MUSIC).getAbsolutePath(),
+					Environment.getExternalStorageDirectory().getAbsolutePath()
+							+ "/AndroidPlayer");
+
 			constructControls();
 			registerListeners();
 
-			Song firstSong = songFactory.initialize(
-					Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC).getAbsolutePath(), Environment
-							.getExternalStorageDirectory().getAbsolutePath()
-							+ "/AndroidPlayer");
 			Toast.makeText(context, "Done Scanning Songs!!", Toast.LENGTH_LONG)
 					.show();
 			try {
-				playSong(firstSong);
+				playSong(firstSong, false);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -168,10 +152,32 @@ public class MainActivity extends Activity {
 	private void constructControls() {
 		play = (Button) findViewById(R.id.play);
 		skip = (Button) findViewById(R.id.skip);
+		prev = (Button) findViewById(R.id.prev);
+		listButton = (Button) findViewById(R.id.listButton);
+
 		seekBar = (SeekBar) findViewById(R.id.seekBar);
+
 		currentSong = (TextView) findViewById(R.id.currentSong);
 		currentArtist = (TextView) findViewById(R.id.currentArtist);
 		currentGenre = (TextView) findViewById(R.id.currentGenre);
+
+		listView = (ListView) findViewById(R.id.listView);
+		ArrayList<Song> list = new ArrayList<Song>(songFactory.getSongs()
+				.size());
+		for (Song s : songFactory.getSongs()) {
+			list.add(s);
+		}
+		Collections.sort(list, new Comparator<Song>() {
+			@Override
+			public int compare(Song arg0, Song arg1) {
+				return arg0.toString().compareTo(arg1.toString());
+			}
+		});
+
+		adapter = new ArrayAdapter<Song>(this, R.layout.list_view, R.id.label,
+				list);
+		listView.setAdapter(adapter);
+		listView.setVisibility(View.INVISIBLE);
 
 		currentSong.setSelected(true);
 		currentArtist.setSelected(true);
@@ -187,10 +193,83 @@ public class MainActivity extends Activity {
 						player.getCurrentPosition() / 1000,
 						player.getDuration() / 1000);
 				try {
-					playSong(nextSong);
+					playSong(nextSong, true);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
+			}
+		});
+
+		prev.setOnClickListener(new OnClickListener() {
+
+			@Override
+			public void onClick(View view) {
+				Song prevSong = songFactory.prev(
+						player.getCurrentPosition() / 1000,
+						player.getDuration() / 1000);
+				if (prevSong != null) {
+					try {
+						playSong(prevSong, true);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		});
+
+		play.setOnClickListener(new OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				if (player.isPlaying()) {
+					player.pause();
+					play.setText("Play ");
+				} else {
+					player.start();
+					play.setText("Pause");
+				}
+			}
+		});
+
+		listButton.setOnClickListener(new OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				if (showingList) {
+					currentArtist.setVisibility(View.VISIBLE);
+					currentGenre.setVisibility(View.VISIBLE);
+					currentSong.setVisibility(View.VISIBLE);
+					listView.setVisibility(View.INVISIBLE);
+					showingList = false;
+				} else {
+					currentArtist.setVisibility(View.INVISIBLE);
+					currentGenre.setVisibility(View.INVISIBLE);
+					currentSong.setVisibility(View.INVISIBLE);
+					listView.setVisibility(View.VISIBLE);
+					showingList = true;
+				}
+			}
+		});
+
+		listView.setOnItemClickListener(new OnItemClickListener() {
+
+			@Override
+			public void onItemClick(AdapterView<?> parent, View view,
+					int position, long id) {
+
+				// ListView Clicked item value
+				Song itemValue = (Song) listView.getItemAtPosition(position);
+				double duration = player.getCurrentPosition() / 1000;
+				double maxDuration = player.getDuration() / 1000;
+				songFactory.setCurrent(duration, maxDuration, itemValue);
+
+				try {
+					playSong(itemValue, true);
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
 			}
 		});
 
@@ -210,20 +289,6 @@ public class MainActivity extends Activity {
 					boolean fromUser) {
 				if (fromUser) {
 					player.seekTo(sb.getProgress());
-				}
-			}
-		});
-
-		play.setOnClickListener(new OnClickListener() {
-
-			@Override
-			public void onClick(View v) {
-				if (player.isPlaying()) {
-					player.pause();
-					play.setText("Play ");
-				} else {
-					player.start();
-					play.setText("Pause");
 				}
 			}
 		});
