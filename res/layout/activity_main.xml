@@ -74,7 +74,6 @@
         android:id="@+id/listView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_above="@+id/seekBar"
         android:layout_alignLeft="@+id/seekBar"
         android:layout_alignParentRight="true"
         android:layout_below="@+id/listButton" >
@@ -104,5 +103,14 @@
         android:singleLine="true"
         android:text="@string/currentSong"
         android:textAppearance="?android:attr/textAppearanceLarge" />
+
+    <EditText
+        android:id="@+id/searchBox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/listButton"
+        android:layout_alignBottom="@+id/listButton"
+        android:layout_alignLeft="@+id/listView"
+        android:ems="10" />
 
 </RelativeLayout>
