@@ -18,7 +18,7 @@ import android.widget.TextView;
 import com.androidplayer.MusicPlayer;
 import com.androidplayer.R;
 
-public class NowPlayingFragment extends Fragment {
+public class NowPlayingFragment extends Fragment implements FragmentInterface {
 
 	private static Button play;
 	private static Button skip;
@@ -34,7 +34,8 @@ public class NowPlayingFragment extends Fragment {
 
 	private static MusicPlayer musicPlayer = null;
 
-	private static boolean initialized = false;
+	private static final String PLAY = "Play";
+	private static final String PAUSE = "Pause";
 
 	private View rootView;
 
@@ -43,13 +44,24 @@ public class NowPlayingFragment extends Fragment {
 		this.rootView = inflater.inflate(R.layout.now_playing_fragment,
 				container, false);
 		createView();
-		setRetainInstance(true);
 		return rootView;
 	}
 
-	@Override
-	public void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
+	public void createView() {
+		musicPlayer = MusicPlayer.getInstance(getActivity()
+				.getApplicationContext());
+
+		constructControls();
+		registerListeners();
+
+		run = new Runnable() {
+			@Override
+			public void run() {
+				seekUpdation();
+			}
+		};
+
+		run.run();
 	}
 
 	public void playSong(Song song, boolean start)
@@ -65,45 +77,6 @@ public class NowPlayingFragment extends Fragment {
 		seekBar.setMax(musicPlayer.getMediaPlayer().getDuration());
 	}
 
-	private void createView() {
-
-		if (!initialized) {
-
-			musicPlayer = MusicPlayer.getInstance(getActivity()
-					.getApplicationContext());
-
-			constructControls();
-			registerListeners();
-
-			try {
-				playSong(musicPlayer.getCurrentSong(), false);
-			} catch (IllegalArgumentException e) {
-				e.printStackTrace();
-			} catch (SecurityException e) {
-				e.printStackTrace();
-			} catch (IllegalStateException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-
-			run = new Runnable() {
-				@Override
-				public void run() {
-					seekUpdation();
-				}
-			};
-
-			run.run();
-			initialized = true;
-		}
-	}
-
-	private void seekUpdation() {
-		seekBar.setProgress(musicPlayer.getMediaPlayer().getCurrentPosition());
-		seekHandler.postDelayed(run, 500);
-	}
-
 	private void constructControls() {
 		play = (Button) rootView.findViewById(R.id.play);
 		skip = (Button) rootView.findViewById(R.id.skip);
@@ -115,9 +88,23 @@ public class NowPlayingFragment extends Fragment {
 		currentArtist = (TextView) rootView.findViewById(R.id.currentArtist);
 		currentGenre = (TextView) rootView.findViewById(R.id.currentGenre);
 
-		currentSong.setSelected(true);
-		currentArtist.setSelected(true);
-		currentGenre.setSelected(true);
+		Song song = musicPlayer.getCurrentSong();
+		currentSong.setText(song.getTag().title);
+		currentArtist.setText("{" + song.getTag().artist + "}");
+		currentGenre.setText("[[" + song.getTag().genre + "]]");
+
+		if (!musicPlayer.isPlaying()) {
+			play.setText(PLAY);
+			try {
+				musicPlayer.playSong(song, false);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		} else {
+			play.setText(PAUSE);
+		}
+		seekBar.setProgress(musicPlayer.getMediaPlayer().getCurrentPosition());
+		seekBar.setMax(musicPlayer.getMediaPlayer().getDuration());
 	}
 
 	private void registerListeners() {
@@ -155,10 +142,10 @@ public class NowPlayingFragment extends Fragment {
 			public void onClick(View v) {
 				if (musicPlayer.isPlaying()) {
 					musicPlayer.pausePlayback();
-					play.setText("Play ");
+					play.setText(PLAY);
 				} else {
 					musicPlayer.startPlayback();
-					play.setText("Pause");
+					play.setText(PAUSE);
 				}
 			}
 		});
@@ -183,4 +170,10 @@ public class NowPlayingFragment extends Fragment {
 			}
 		});
 	}
+
+	private void seekUpdation() {
+		seekBar.setProgress(musicPlayer.getMediaPlayer().getCurrentPosition());
+		seekHandler.postDelayed(run, 500);
+	}
+
 }

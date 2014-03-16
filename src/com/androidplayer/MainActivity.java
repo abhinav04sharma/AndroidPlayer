@@ -11,6 +11,7 @@ import android.support.v4.view.ViewPager;
 import android.view.Menu;
 
 import com.androidplayer.adapters.TabsPagerAdapter;
+import com.androidplayer.fragments.FragmentInterface;
 
 // TODO
 @SuppressLint("NewApi")
@@ -19,7 +20,6 @@ public class MainActivity extends FragmentActivity implements TabListener {
 	private ViewPager viewPager;
 	private TabsPagerAdapter mAdapter;
 	private ActionBar actionBar;
-	// Tab titles
 	private String[] tabs = { "Now Playing", "Songs" };
 
 	@Override
@@ -27,7 +27,6 @@ public class MainActivity extends FragmentActivity implements TabListener {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
-		// Initilization
 		viewPager = (ViewPager) findViewById(R.id.pager);
 		actionBar = getActionBar();
 		mAdapter = new TabsPagerAdapter(getSupportFragmentManager());
@@ -35,7 +34,6 @@ public class MainActivity extends FragmentActivity implements TabListener {
 		viewPager.setAdapter(mAdapter);
 		actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
 
-		// Adding Tabs
 		for (String tab_name : tabs) {
 			actionBar.addTab(actionBar.newTab().setText(tab_name)
 					.setTabListener(this));
@@ -45,6 +43,11 @@ public class MainActivity extends FragmentActivity implements TabListener {
 			@Override
 			public void onPageSelected(int position) {
 				actionBar.setSelectedNavigationItem(position);
+				FragmentInterface fragment = (FragmentInterface) mAdapter
+						.instantiateItem(viewPager, position);
+				if (fragment != null) {
+					fragment.createView();
+				}
 			}
 
 			@Override
@@ -59,15 +62,12 @@ public class MainActivity extends FragmentActivity implements TabListener {
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
-		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.main, menu);
 		return true;
 	}
 
 	@Override
 	public void onTabReselected(Tab arg0, FragmentTransaction arg1) {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
@@ -77,8 +77,6 @@ public class MainActivity extends FragmentActivity implements TabListener {
 
 	@Override
 	public void onTabUnselected(Tab arg0, FragmentTransaction arg1) {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
@@ -86,7 +84,7 @@ public class MainActivity extends FragmentActivity implements TabListener {
 		if (viewPager.getCurrentItem() != 0) {
 			viewPager.setCurrentItem(viewPager.getCurrentItem() - 1, true);
 		} else {
-			moveTaskToBack(true);
+			super.onBackPressed();
 		}
 	}
 

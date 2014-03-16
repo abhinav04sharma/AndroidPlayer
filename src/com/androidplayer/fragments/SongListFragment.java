@@ -1,6 +1,5 @@
 package com.androidplayer.fragments;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -10,6 +9,8 @@ import tags.Song;
 import android.content.Context;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -25,9 +26,8 @@ import android.widget.TextView;
 
 import com.androidplayer.MusicPlayer;
 import com.androidplayer.R;
-import com.androidplayer.adapters.TabsPagerAdapter;
 
-public class SongListFragment extends Fragment {
+public class SongListFragment extends Fragment implements FragmentInterface {
 
 	private static EditText searchBox;
 	private static ListView listView;
@@ -40,7 +40,7 @@ public class SongListFragment extends Fragment {
 
 	private View rootView;
 
-	private static boolean initialized = false;
+	private static boolean isListConstructed = false;
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -53,40 +53,22 @@ public class SongListFragment extends Fragment {
 		return rootView;
 	}
 
-	@Override
-	public void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-	}
-
-	private void createView() {
-		if (!initialized) {
-			musicPlayer = MusicPlayer.getInstance(getActivity()
-					.getApplicationContext());
-			constructControls();
-			registerListeners();
-			initialized = true;
-		}
+	public void createView() {
+		musicPlayer = MusicPlayer.getInstance(getActivity()
+				.getApplicationContext());
+		constructControls();
+		registerListeners();
 	}
 
 	private void constructControls() {
 		searchBox = (EditText) rootView.findViewById(R.id.searchBox);
-
+		searchBox.clearFocus();
+		searchBox.setText("");
 		listView = (ListView) rootView.findViewById(R.id.listView);
-
-		list = new ArrayList<Song>(musicPlayer.getSongs().size());
-		searchList = new ArrayList<Song>();
-
-		for (Song s : musicPlayer.getSongs()) {
-			list.add(s);
+		if (!isListConstructed) {
+			constructList();
+			isListConstructed = true;
 		}
-
-		Collections.sort(list, new Comparator<Song>() {
-			@Override
-			public int compare(Song arg0, Song arg1) {
-				return arg0.toString().compareTo(arg1.toString());
-			}
-		});
-
 		adapter = new ArrayAdapter<Song>(getActivity(), R.layout.list_view,
 				R.id.label, list);
 		listView.setAdapter(adapter);
@@ -102,17 +84,9 @@ public class SongListFragment extends Fragment {
 				// ListView Clicked item value
 				Song itemValue = (Song) listView.getItemAtPosition(position);
 				musicPlayer.setCurrent(itemValue);
-				NowPlayingFragment npf = (NowPlayingFragment) TabsPagerAdapter
-						.getFragment(R.id.now_playing_fragment);
 				try {
-					npf.playSong(itemValue, true);
-				} catch (IllegalArgumentException e) {
-					e.printStackTrace();
-				} catch (SecurityException e) {
-					e.printStackTrace();
-				} catch (IllegalStateException e) {
-					e.printStackTrace();
-				} catch (IOException e) {
+					musicPlayer.playSong(itemValue, true);
+				} catch (Exception e) {
 					e.printStackTrace();
 				} finally {
 					InputMethodManager imm = (InputMethodManager) getActivity()
@@ -129,20 +103,6 @@ public class SongListFragment extends Fragment {
 					public boolean onEditorAction(TextView v, int actionId,
 							KeyEvent event) {
 						if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-							String search = searchBox.getText().toString();
-							searchList.clear();
-							for (Song s : list) {
-								if (s.toString().length() >= search.length()) {
-									if (s.toString()
-											.toUpperCase(Locale.getDefault())
-											.contains(search.toUpperCase())) {
-										searchList.add(s);
-									}
-								}
-							}
-							adapter = new ArrayAdapter<Song>(getActivity(),
-									R.layout.list_view, R.id.label, searchList);
-							listView.setAdapter(adapter);
 							InputMethodManager imm = (InputMethodManager) getActivity()
 									.getSystemService(
 											Context.INPUT_METHOD_SERVICE);
@@ -155,38 +115,50 @@ public class SongListFragment extends Fragment {
 				});
 
 		// filter list view
-		// searchBox.addTextChangedListener(new TextWatcher() {
-		//
-		// @Override
-		// public void onTextChanged(CharSequence searchString, int start,
-		// int before, int count) {
-		// String search = searchBox.getText().toString();
-		// searchList.clear();
-		// for (Song s : list) {
-		// if (s.toString().length() >= search.length()) {
-		// if (s.toString().toUpperCase(Locale.getDefault())
-		// .contains(search.toUpperCase())) {
-		// searchList.add(s);
-		// }
-		// }
-		// }
-		// adapter = new ArrayAdapter<Song>(getActivity(),
-		// R.layout.list_view, R.id.label, searchList);
-		// listView.setAdapter(adapter);
-		// }
-		//
-		// @Override
-		// public void beforeTextChanged(CharSequence arg0, int arg1,
-		// int arg2, int arg3) {
-		// // TODO Auto-generated method stub
-		//
-		// }
-		//
-		// @Override
-		// public void afterTextChanged(Editable arg0) {
-		// // TODO Auto-generated method stub
-		//
-		// }
-		// });
+		searchBox.addTextChangedListener(new TextWatcher() {
+
+			@Override
+			public void onTextChanged(CharSequence searchString, int start,
+					int before, int count) {
+				String search = searchBox.getText().toString();
+				searchList.clear();
+				for (Song s : list) {
+					if (s.toString().length() >= search.length()) {
+						if (s.toString()
+								.toUpperCase(Locale.getDefault())
+								.contains(
+										search.toUpperCase(Locale.getDefault()))) {
+							searchList.add(s);
+						}
+					}
+				}
+				adapter = new ArrayAdapter<Song>(getActivity(),
+						R.layout.list_view, R.id.label, searchList);
+				listView.setAdapter(adapter);
+			}
+
+			@Override
+			public void beforeTextChanged(CharSequence arg0, int arg1,
+					int arg2, int arg3) {
+			}
+
+			@Override
+			public void afterTextChanged(Editable arg0) {
+			}
+		});
 	}
+
+	private void constructList() {
+		list = new ArrayList<Song>(musicPlayer.getSongs().size());
+		searchList = new ArrayList<Song>();
+
+		list.addAll(musicPlayer.getSongs());
+		Collections.sort(list, new Comparator<Song>() {
+			@Override
+			public int compare(Song arg0, Song arg1) {
+				return arg0.toString().compareTo(arg1.toString());
+			}
+		});
+	}
+
 }

@@ -55,7 +55,7 @@ public class MusicPlayer {
 	public Song getCurrentSong() {
 		return songFactory.getCurrent();
 	}
-	
+
 	public void setCurrent(Song song) {
 		double duration = player.getCurrentPosition() / 1000;
 		double maxDuration = player.getDuration() / 1000;
@@ -91,11 +91,8 @@ public class MusicPlayer {
 	public void playSong(Song song, boolean start)
 			throws IllegalArgumentException, SecurityException,
 			IllegalStateException, IOException {
-		if (player != null) {
-			player.stop();
-		}
-
-		player = new MediaPlayer();
+		player.stop();
+		player.reset();
 		player.setAudioStreamType(AudioManager.STREAM_MUSIC);
 		player.setDataSource(getURLFileName(song.getFileName()));
 		player.prepare();
@@ -224,6 +221,7 @@ public class MusicPlayer {
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
+		player = new MediaPlayer();
 		songFactory.initialize(songs, artists, genres);
 	}
 }
