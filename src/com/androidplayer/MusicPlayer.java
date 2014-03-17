@@ -15,7 +15,6 @@ import org.apache.commons.httpclient.util.URIUtil;
 import shuffle.SongFactory;
 import tags.Song;
 import tags.Tag;
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.Cursor;
 import android.media.AudioManager;
@@ -91,7 +90,9 @@ public class MusicPlayer {
 	public void playSong(Song song, boolean start)
 			throws IllegalArgumentException, SecurityException,
 			IllegalStateException, IOException {
-		player.stop();
+		if (player.isPlaying()) {
+			player.stop();
+		}
 		player.reset();
 		player.setAudioStreamType(AudioManager.STREAM_MUSIC);
 		player.setDataSource(getURLFileName(song.getFileName()));
@@ -127,8 +128,6 @@ public class MusicPlayer {
 		br.close();
 	}
 
-	// TODO
-	@SuppressLint("NewApi")
 	private void constructLists() throws IOException {
 
 		readGenresFromFile();

@@ -1,26 +1,27 @@
 package com.androidplayer;
 
-import android.annotation.SuppressLint;
 import android.app.ActionBar;
 import android.app.ActionBar.Tab;
 import android.app.ActionBar.TabListener;
 import android.app.FragmentTransaction;
+import android.app.SearchManager;
+import android.content.Context;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.view.ViewPager;
 import android.view.Menu;
+import android.view.MenuInflater;
+import android.widget.SearchView;
 
 import com.androidplayer.adapters.TabsPagerAdapter;
 import com.androidplayer.fragments.FragmentInterface;
 
-// TODO
-@SuppressLint("NewApi")
 public class MainActivity extends FragmentActivity implements TabListener {
 
 	private ViewPager viewPager;
 	private TabsPagerAdapter mAdapter;
 	private ActionBar actionBar;
-	private String[] tabs = { "Now Playing", "Songs" };
+	private String[] tabs = { "Now Playing", "All Songs", "Mood List" };
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -62,8 +63,14 @@ public class MainActivity extends FragmentActivity implements TabListener {
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
-		getMenuInflater().inflate(R.menu.main, menu);
-		return true;
+		MenuInflater inflater = getMenuInflater();
+		inflater.inflate(R.menu.activity_main_actions, menu);
+		SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
+		SearchView searchView = (SearchView) menu.findItem(R.id.action_search)
+				.getActionView();
+		searchView.setSearchableInfo(searchManager
+				.getSearchableInfo(getComponentName()));
+		return super.onCreateOptionsMenu(menu);
 	}
 
 	@Override

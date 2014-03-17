@@ -1,8 +1,6 @@
 package com.androidplayer.fragments;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 
 import tags.Song;
 import android.os.Bundle;
@@ -18,7 +16,7 @@ import com.androidplayer.MusicPlayer;
 import com.androidplayer.R;
 import com.androidplayer.adapters.SongListAdapter;
 
-public class SongListFragment extends Fragment implements FragmentInterface {
+public class MoodListFragment extends Fragment implements FragmentInterface {
 
 	private static ListView listView;
 
@@ -29,14 +27,12 @@ public class SongListFragment extends Fragment implements FragmentInterface {
 
 	private View rootView;
 
-	private static boolean isListConstructed = false;
-
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
 			Bundle savedInstanceState) {
 
-		this.rootView = inflater.inflate(R.layout.listview_fragment,
-				container, false);
+		this.rootView = inflater.inflate(R.layout.listview_fragment, container,
+				false);
 		createView();
 		setRetainInstance(true);
 		return rootView;
@@ -52,11 +48,9 @@ public class SongListFragment extends Fragment implements FragmentInterface {
 	private void constructControls() {
 		listView = (ListView) rootView.findViewById(R.id.listView);
 		listView.setFastScrollEnabled(true);
-		if (!isListConstructed) {
-			constructList();
-			isListConstructed = true;
-		}
-		adapter = new SongListAdapter(getActivity(), R.layout.listview_row_layout, list.toArray(new Song[]{}));
+		constructList();
+		adapter = new SongListAdapter(getActivity(),
+				R.layout.listview_row_layout, list.toArray(new Song[] {}));
 		listView.setAdapter(adapter);
 	}
 
@@ -82,13 +76,7 @@ public class SongListFragment extends Fragment implements FragmentInterface {
 
 	private void constructList() {
 		list = new ArrayList<Song>(musicPlayer.getSongs().size());
-		list.addAll(musicPlayer.getSongs());
-		Collections.sort(list, new Comparator<Song>() {
-			@Override
-			public int compare(Song arg0, Song arg1) {
-				return arg0.toString().compareTo(arg1.toString());
-			}
-		});
+		list.addAll(musicPlayer.getSongs().subList(0, 20));
 	}
 
 }

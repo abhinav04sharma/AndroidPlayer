@@ -4,6 +4,7 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 
+import com.androidplayer.fragments.MoodListFragment;
 import com.androidplayer.fragments.NowPlayingFragment;
 import com.androidplayer.fragments.SongListFragment;
 
@@ -23,6 +24,9 @@ public class TabsPagerAdapter extends FragmentPagerAdapter {
 		case 1:
 			f = new SongListFragment();
 			break;
+		case 2:
+			f = new MoodListFragment();
+			break;
 		}
 
 		return f;
@@ -30,7 +34,7 @@ public class TabsPagerAdapter extends FragmentPagerAdapter {
 
 	@Override
 	public int getCount() {
-		return 2;
+		return 3;
 	}
 
 }
