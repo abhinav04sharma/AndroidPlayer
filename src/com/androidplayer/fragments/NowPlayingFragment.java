@@ -10,7 +10,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
-import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
@@ -20,9 +20,9 @@ import com.androidplayer.R;
 
 public class NowPlayingFragment extends Fragment implements FragmentInterface {
 
-	private static Button play;
-	private static Button skip;
-	private static Button prev;
+	private static ImageButton play;
+	private static ImageButton skip;
+	private static ImageButton prev;
 
 	private static TextView currentSong;
 	private static TextView currentArtist;
@@ -34,8 +34,8 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 
 	private static MusicPlayer musicPlayer = null;
 
-	private static final String PLAY = "Play";
-	private static final String PAUSE = "Pause";
+//	private static final String PLAY = "Play";
+//	private static final String PAUSE = "Pause";
 
 	private View rootView;
 
@@ -78,9 +78,9 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 	}
 
 	private void constructControls() {
-		play = (Button) rootView.findViewById(R.id.play);
-		skip = (Button) rootView.findViewById(R.id.skip);
-		prev = (Button) rootView.findViewById(R.id.prev);
+		play = (ImageButton) rootView.findViewById(R.id.play);
+		skip = (ImageButton) rootView.findViewById(R.id.skip);
+		prev = (ImageButton) rootView.findViewById(R.id.prev);
 
 		seekBar = (SeekBar) rootView.findViewById(R.id.seekBar);
 
@@ -94,14 +94,14 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 		currentGenre.setText("[[" + song.getTag().genre + "]]");
 
 		if (!musicPlayer.isPlaying()) {
-			play.setText(PLAY);
 			try {
 				musicPlayer.playSong(song, false);
+				play.setImageResource(R.drawable.ic_action_play);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		} else {
-			play.setText(PAUSE);
+			play.setImageResource(R.drawable.ic_action_pause);
 		}
 		seekBar.setProgress(musicPlayer.getMediaPlayer().getCurrentPosition());
 		seekBar.setMax(musicPlayer.getMediaPlayer().getDuration());
@@ -142,10 +142,10 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 			public void onClick(View v) {
 				if (musicPlayer.isPlaying()) {
 					musicPlayer.pausePlayback();
-					play.setText(PLAY);
+					play.setImageResource(R.drawable.ic_action_play);
 				} else {
 					musicPlayer.startPlayback();
-					play.setText(PAUSE);
+					play.setImageResource(R.drawable.ic_action_pause);
 				}
 			}
 		});

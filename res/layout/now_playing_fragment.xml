@@ -54,31 +54,38 @@
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="18dp" />
 
-    <Button
+    <ImageButton
         android:id="@+id/play"
+        android:src="@drawable/ic_action_play"
+        android:background="@null"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignBaseline="@+id/skip"
         android:layout_alignBottom="@+id/skip"
         android:layout_centerHorizontal="true"
-        android:text="@string/play" />
+        android:contentDescription="@string/play" />
 
-    <Button
-        android:id="@+id/prev"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignBaseline="@+id/play"
-        android:layout_alignBottom="@+id/play"
-        android:layout_alignLeft="@+id/seekBar"
-        android:text="@string/prev" />
-
-    <Button
+    <ImageButton
         android:id="@+id/skip"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_alignRight="@+id/seekBar"
-        android:layout_marginBottom="34dp"
-        android:text="@string/skip" />
+        android:layout_alignParentRight="true"
+        android:layout_marginBottom="33dp"
+        android:layout_marginRight="30dp"
+        android:background="@null"
+        android:contentDescription="@string/skip"
+        android:src="@drawable/ic_action_next" />
+
+    <ImageButton
+        android:id="@+id/prev"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignTop="@+id/play"
+        android:layout_marginLeft="30dp"
+        android:background="@null"
+        android:contentDescription="@string/prev"
+        android:src="@drawable/ic_action_previous" />
 
 </RelativeLayout>
