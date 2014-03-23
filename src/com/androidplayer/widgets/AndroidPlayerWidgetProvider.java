@@ -15,9 +15,9 @@ import com.androidplayer.R;
 public class AndroidPlayerWidgetProvider extends AppWidgetProvider {
 
 	private static MusicPlayer musicPlayer = null;
-	private static final String ACTION_WIDGET_PLAY = "ActionWidgetPlay";
-	private static final String ACTION_WIDGET_SKIP = "ActionWidgetSkip";
-	private static final String ACTION_WIDGET_PREV = "ActionWidgetPrev";
+	public static final String ACTION_WIDGET_PLAY = "com.androidplayer.ActionWidgetPlay";
+	public static final String ACTION_WIDGET_SKIP = "com.androidplayer.ActionWidgetSkip";
+	public static final String ACTION_WIDGET_PREV = "com.androidplayer.ActionWidgetPrev";
 
 	@Override
 	public void onUpdate(Context context, AppWidgetManager appWidgetManager,

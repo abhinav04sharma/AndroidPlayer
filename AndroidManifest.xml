@@ -52,7 +52,6 @@
                 <action android:name="com.androidplayer.widgets.AndroidPlayerWidgetProvider.ACTION_WIDGET_PLAY" />
                 <action android:name="com.androidplayer.widgets.AndroidPlayerWidgetProvider.ACTION_WIDGET_SKIP" />
                 <action android:name="com.androidplayer.widgets.AndroidPlayerWidgetProvider.ACTION_WIDGET_PREV" />
-                <action android:name="com.androidplayer.widgets.AndroidPlayerWidgetProvider.ACTION_WIDGET_TITLE" />
             </intent-filter>
 
             <meta-data

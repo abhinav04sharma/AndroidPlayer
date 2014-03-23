@@ -15,12 +15,17 @@ import org.apache.commons.httpclient.util.URIUtil;
 import shuffle.SongFactory;
 import tags.Song;
 import tags.Tag;
+import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.database.Cursor;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.provider.MediaStore;
+import android.widget.RemoteViews;
+
+import com.androidplayer.widgets.AndroidPlayerWidgetProvider;
 
 public class MusicPlayer {
 
@@ -59,16 +64,20 @@ public class MusicPlayer {
 		double duration = player.getCurrentPosition() / 1000;
 		double maxDuration = player.getDuration() / 1000;
 		songFactory.setCurrent(duration, maxDuration, song);
+		updateWidgets();
 	}
 
 	public Song getPrev() {
-		return songFactory.prev(player.getCurrentPosition() / 1000,
+		Song ret = songFactory.prev(player.getCurrentPosition() / 1000,
 				player.getDuration() / 1000);
+		updateWidgets();
+		return ret;
 	}
 
 	public Song getNext() {
-		return songFactory.next(player.getCurrentPosition() / 1000,
+		Song ret = songFactory.next(player.getCurrentPosition() / 1000,
 				player.getDuration() / 1000);
+		return ret;
 	}
 
 	public boolean isPlaying() {
@@ -100,6 +109,7 @@ public class MusicPlayer {
 		if (start) {
 			player.start();
 		}
+		updateWidgets();
 	}
 
 	public MediaPlayer getMediaPlayer() {
@@ -107,6 +117,17 @@ public class MusicPlayer {
 	}
 
 	private MusicPlayer() {
+	}
+
+	private void updateWidgets() {
+		RemoteViews views = new RemoteViews(context.getPackageName(),
+				R.layout.androidplayer_appwidget);
+		ComponentName watchWidget = new ComponentName(context,
+				AndroidPlayerWidgetProvider.class);
+		views.setTextViewText(R.id.widget_current_song, musicPlayer
+				.getCurrentSong().getTag().title);
+		(AppWidgetManager.getInstance(context)).updateAppWidget(watchWidget,
+				views);
 	}
 
 	private String getURLFileName(String filename) {
@@ -144,7 +165,7 @@ public class MusicPlayer {
 
 		mediaCursor = context.getContentResolver().query(
 				MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, mediaProjection,
-				null, null, null);
+				MediaStore.Audio.Media.IS_MUSIC + " != 0", null, null);
 
 		if (mediaCursor.moveToFirst()) {
 			do {
@@ -222,5 +243,6 @@ public class MusicPlayer {
 		}
 		player = new MediaPlayer();
 		songFactory.initialize(songs, artists, genres);
+		updateWidgets();
 	}
 }
