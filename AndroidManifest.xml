@@ -20,8 +20,8 @@
         <activity
             android:name="com.androidplayer.MainActivity"
             android:label="@string/app_name"
-            android:windowSoftInputMode="adjustPan"
-            android:screenOrientation="portrait" >
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustPan" >
             <meta-data
                 android:name="android.app.default_searchable"
                 android:value=".SearchResultsActivity" />
@@ -35,8 +35,8 @@
         <!-- Search results activity -->
         <activity
             android:name=".SearchResultsActivity"
-            android:windowSoftInputMode="adjustPan"
-            android:parentActivityName="com.androidplayer.MainActivity" >
+            android:parentActivityName="com.androidplayer.MainActivity"
+            android:windowSoftInputMode="adjustPan" >
             <intent-filter>
                 <action android:name="android.intent.action.SEARCH" />
             </intent-filter>
@@ -45,6 +45,20 @@
                 android:name="android.app.searchable"
                 android:resource="@xml/searchable" />
         </activity>
+
+        <receiver android:name="com.androidplayer.widgets.AndroidPlayerWidgetProvider" >
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.androidplayer.widgets.AndroidPlayerWidgetProvider.ACTION_WIDGET_PLAY" />
+                <action android:name="com.androidplayer.widgets.AndroidPlayerWidgetProvider.ACTION_WIDGET_SKIP" />
+                <action android:name="com.androidplayer.widgets.AndroidPlayerWidgetProvider.ACTION_WIDGET_PREV" />
+                <action android:name="com.androidplayer.widgets.AndroidPlayerWidgetProvider.ACTION_WIDGET_TITLE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/androidplayer_appwidget_info" />
+        </receiver>
     </application>
 
 </manifest>

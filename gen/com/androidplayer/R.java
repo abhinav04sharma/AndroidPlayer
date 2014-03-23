@@ -10,6 +10,9 @@ package com.androidplayer;
 public final class R {
     public static final class attr {
     }
+    public static final class color {
+        public static final int black=0x7f080000;
+    }
     public static final class dimen {
         /**  Default screen margins, per the Android Design guidelines. 
 
@@ -29,31 +32,36 @@ public final class R {
         public static final int ic_launcher=0x7f020005;
     }
     public static final class id {
-        public static final int action_search=0x7f09000e;
-        public static final int artist=0x7f090005;
-        public static final int currentArtist=0x7f090008;
-        public static final int currentGenre=0x7f090009;
-        public static final int currentSong=0x7f090007;
-        public static final int listView=0x7f090003;
-        public static final int list_view_fragment=0x7f090002;
-        public static final int now_playing_fragment=0x7f090006;
-        public static final int pager=0x7f090000;
-        public static final int play=0x7f09000c;
-        public static final int prev=0x7f09000d;
-        public static final int searchList=0x7f090001;
-        public static final int seekBar=0x7f09000a;
-        public static final int skip=0x7f09000b;
-        public static final int song=0x7f090004;
+        public static final int action_search=0x7f0a0012;
+        public static final int artist=0x7f0a000a;
+        public static final int currentArtist=0x7f0a000c;
+        public static final int currentGenre=0x7f0a000d;
+        public static final int currentSong=0x7f0a000b;
+        public static final int listView=0x7f0a0008;
+        public static final int list_view_fragment=0x7f0a0007;
+        public static final int now_playing_fragment=0x7f0a0002;
+        public static final int pager=0x7f0a0000;
+        public static final int play=0x7f0a0010;
+        public static final int prev=0x7f0a0011;
+        public static final int searchList=0x7f0a0001;
+        public static final int seekBar=0x7f0a000e;
+        public static final int skip=0x7f0a000f;
+        public static final int song=0x7f0a0009;
+        public static final int widget_current_song=0x7f0a0006;
+        public static final int widget_play=0x7f0a0003;
+        public static final int widget_prev=0x7f0a0004;
+        public static final int widget_skip=0x7f0a0005;
     }
     public static final class layout {
         public static final int activity_main=0x7f030000;
         public static final int activity_search_results=0x7f030001;
-        public static final int listview_fragment=0x7f030002;
-        public static final int listview_row_layout=0x7f030003;
-        public static final int now_playing_fragment=0x7f030004;
+        public static final int androidplayer_appwidget=0x7f030002;
+        public static final int listview_fragment=0x7f030003;
+        public static final int listview_row_layout=0x7f030004;
+        public static final int now_playing_fragment=0x7f030005;
     }
     public static final class menu {
-        public static final int activity_main_actions=0x7f080000;
+        public static final int activity_main_actions=0x7f090000;
     }
     public static final class string {
         public static final int action_search=0x7f060009;
@@ -97,6 +105,7 @@ public final class R {
         public static final int AppTheme=0x7f070001;
     }
     public static final class xml {
-        public static final int searchable=0x7f040000;
+        public static final int androidplayer_appwidget_info=0x7f040000;
+        public static final int searchable=0x7f040001;
     }
 }
