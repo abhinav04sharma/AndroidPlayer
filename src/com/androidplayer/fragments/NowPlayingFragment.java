@@ -1,11 +1,14 @@
 package com.androidplayer.fragments;
 
-import java.io.IOException;
-
 import tags.Song;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.LocalBroadcastManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -34,10 +37,14 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 
 	private static MusicPlayer musicPlayer = null;
 
-//	private static final String PLAY = "Play";
-//	private static final String PAUSE = "Pause";
-
 	private View rootView;
+	private BroadcastReceiver broadCastReveiver = new BroadcastReceiver() {
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			setSong((Song) intent
+					.getSerializableExtra(MusicPlayer.CURRENT_SONG));
+		}
+	};
 
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
 			Bundle savedInstanceState) {
@@ -47,7 +54,19 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 		return rootView;
 	}
 
+	@Override
+	public void onDestroy() {
+		LocalBroadcastManager.getInstance(getActivity().getApplicationContext()).unregisterReceiver(broadCastReveiver);
+		super.onDestroy();
+	}
+
 	public void createView() {
+		// receiver for when song changes
+		LocalBroadcastManager
+				.getInstance(getActivity().getApplicationContext())
+				.registerReceiver(broadCastReveiver,
+						new IntentFilter(MusicPlayer.SONG_CHANGED));
+
 		musicPlayer = MusicPlayer.getInstance(getActivity()
 				.getApplicationContext());
 
@@ -64,17 +83,19 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 		run.run();
 	}
 
-	public void playSong(Song song, boolean start)
-			throws IllegalArgumentException, SecurityException,
-			IllegalStateException, IOException {
-
-		musicPlayer.playSong(song, start);
+	private void setSong(Song song) {
 		currentSong.setText(song.getTag().title);
 		currentArtist.setText("{" + song.getTag().artist + "}");
 		currentGenre.setText("[[" + song.getTag().genre + "]]");
 
-		seekBar.setProgress(0);
+		seekBar.setProgress(musicPlayer.getMediaPlayer().getCurrentPosition());
 		seekBar.setMax(musicPlayer.getMediaPlayer().getDuration());
+
+		if (!musicPlayer.isPlaying()) {
+			play.setImageResource(R.drawable.ic_action_play);
+		} else {
+			play.setImageResource(R.drawable.ic_action_pause);
+		}
 	}
 
 	private void constructControls() {
@@ -87,24 +108,6 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 		currentSong = (TextView) rootView.findViewById(R.id.currentSong);
 		currentArtist = (TextView) rootView.findViewById(R.id.currentArtist);
 		currentGenre = (TextView) rootView.findViewById(R.id.currentGenre);
-
-		Song song = musicPlayer.getCurrentSong();
-		currentSong.setText(song.getTag().title);
-		currentArtist.setText("{" + song.getTag().artist + "}");
-		currentGenre.setText("[[" + song.getTag().genre + "]]");
-
-		if (!musicPlayer.isPlaying()) {
-			try {
-				musicPlayer.playSong(song, false);
-				play.setImageResource(R.drawable.ic_action_play);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		} else {
-			play.setImageResource(R.drawable.ic_action_pause);
-		}
-		seekBar.setProgress(musicPlayer.getMediaPlayer().getCurrentPosition());
-		seekBar.setMax(musicPlayer.getMediaPlayer().getDuration());
 	}
 
 	private void registerListeners() {
@@ -112,9 +115,9 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 
 			@Override
 			public void onClick(View view) {
-				Song nextSong = musicPlayer.getNext();
 				try {
-					playSong(nextSong, true);
+					musicPlayer.playSong(musicPlayer.getNext(),
+							musicPlayer.isPlaying());
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -126,12 +129,10 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 			@Override
 			public void onClick(View view) {
 				Song prevSong = musicPlayer.getPrev();
-				if (prevSong != null) {
-					try {
-						playSong(prevSong, true);
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
+				try {
+					musicPlayer.playSong(prevSong, musicPlayer.isPlaying());
+				} catch (Exception e) {
+					e.printStackTrace();
 				}
 			}
 		});

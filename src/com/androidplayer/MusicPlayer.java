@@ -15,40 +15,43 @@ import org.apache.commons.httpclient.util.URIUtil;
 import shuffle.SongFactory;
 import tags.Song;
 import tags.Tag;
-import android.appwidget.AppWidgetManager;
-import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
 import android.database.Cursor;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.media.MediaPlayer.OnCompletionListener;
+import android.media.audiofx.AudioEffect;
 import android.net.Uri;
 import android.provider.MediaStore;
-import android.widget.RemoteViews;
-
-import com.androidplayer.widgets.AndroidPlayerWidgetProvider;
+import android.support.v4.content.LocalBroadcastManager;
 
 public class MusicPlayer {
 
 	private static MusicPlayer musicPlayer = null;
-
 	private Context context;
+
 	private final String GENRES_META_FILE_NAME = "GENRES_META_FILE.txt";
 
-	private List<Song> songs = new ArrayList<Song>();
-	private List<String> artists = new ArrayList<String>();
-	private List<String> genres = new ArrayList<String>();
+	private final List<Song> songs = new ArrayList<Song>();
+	private final List<String> artists = new ArrayList<String>();
+	private final List<String> genres = new ArrayList<String>();
 
-	public static SongFactory songFactory = new SongFactory();
-	public static MediaPlayer player;
+	public static final SongFactory songFactory = new SongFactory();
+	public static final MediaPlayer player = new MediaPlayer();
+
+	public static final String CURRENT_SONG = "com.androidplayer.CURRENT_SONG";
+	public static final String SONG_CHANGED = "com.androidplayer.SONG_CHANGED";
 
 	public static synchronized MusicPlayer getInstance(Context context) {
 		if (musicPlayer == null) {
 			musicPlayer = new MusicPlayer();
-			musicPlayer.context = context;
-			musicPlayer.initialize();
+			musicPlayer.initialize(context);
 
 			return musicPlayer;
 		}
+		// send a song change request each time the music player is initialized
+		musicPlayer.sendSongChangedRequest();
 		return musicPlayer;
 	}
 
@@ -64,19 +67,20 @@ public class MusicPlayer {
 		double duration = player.getCurrentPosition() / 1000;
 		double maxDuration = player.getDuration() / 1000;
 		songFactory.setCurrent(duration, maxDuration, song);
-		updateWidgets();
+		sendSongChangedRequest();
 	}
 
 	public Song getPrev() {
 		Song ret = songFactory.prev(player.getCurrentPosition() / 1000,
 				player.getDuration() / 1000);
-		updateWidgets();
+		sendSongChangedRequest();
 		return ret;
 	}
 
 	public Song getNext() {
 		Song ret = songFactory.next(player.getCurrentPosition() / 1000,
 				player.getDuration() / 1000);
+		sendSongChangedRequest();
 		return ret;
 	}
 
@@ -109,7 +113,6 @@ public class MusicPlayer {
 		if (start) {
 			player.start();
 		}
-		updateWidgets();
 	}
 
 	public MediaPlayer getMediaPlayer() {
@@ -117,17 +120,6 @@ public class MusicPlayer {
 	}
 
 	private MusicPlayer() {
-	}
-
-	private void updateWidgets() {
-		RemoteViews views = new RemoteViews(context.getPackageName(),
-				R.layout.androidplayer_appwidget);
-		ComponentName watchWidget = new ComponentName(context,
-				AndroidPlayerWidgetProvider.class);
-		views.setTextViewText(R.id.widget_current_song, musicPlayer
-				.getCurrentSong().getTag().title);
-		(AppWidgetManager.getInstance(context)).updateAppWidget(watchWidget,
-				views);
 	}
 
 	private String getURLFileName(String filename) {
@@ -235,14 +227,56 @@ public class MusicPlayer {
 		}
 	}
 
-	private void initialize() {
+	private void initialize(Context context) {
+		this.context = context;
 		try {
 			constructLists();
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
-		player = new MediaPlayer();
 		songFactory.initialize(songs, artists, genres);
-		updateWidgets();
+		player.setOnCompletionListener(new OnCompletionListener() {
+			@Override
+			public void onCompletion(MediaPlayer mp) {
+				try {
+					playSong(getNext(), true);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		});
+
+		try {
+			playSong(getCurrentSong(), false);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		registerEquilizer();
+	}
+
+	private void sendSongChangedRequest() {
+		Intent intent = new Intent(SONG_CHANGED);
+		intent.putExtra(CURRENT_SONG, getCurrentSong());
+		LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
+	}
+
+	private void registerEquilizer() {
+		final Intent audioEffectsIntent = new Intent(
+				AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION);
+		audioEffectsIntent.putExtra(AudioEffect.EXTRA_AUDIO_SESSION,
+				player.getAudioSessionId());
+		audioEffectsIntent.putExtra(AudioEffect.EXTRA_PACKAGE_NAME,
+				context.getPackageName());
+		context.sendBroadcast(audioEffectsIntent);
+	}
+
+	private void unRegisterEquilizer() {
+		final Intent audioEffectsIntent = new Intent(
+				AudioEffect.ACTION_CLOSE_AUDIO_EFFECT_CONTROL_SESSION);
+		audioEffectsIntent.putExtra(AudioEffect.EXTRA_AUDIO_SESSION,
+				player.getAudioSessionId());
+		audioEffectsIntent.putExtra(AudioEffect.EXTRA_PACKAGE_NAME,
+				context.getPackageName());
+		context.sendBroadcast(audioEffectsIntent);
 	}
 }
