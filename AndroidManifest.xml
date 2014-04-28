@@ -6,8 +6,8 @@
 
     <uses-sdk
         android:maxSdkVersion="19"
-        android:minSdkVersion="11"
-        android:targetSdkVersion="11" />
+        android:minSdkVersion="14"
+        android:targetSdkVersion="14" />
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
@@ -57,6 +57,11 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/androidplayer_appwidget_info" />
+        </receiver>
+        <receiver android:name="com.androidplayer.RemoteControlBroadcastReceiver" >
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+            </intent-filter>
         </receiver>
     </application>
 

@@ -15,18 +15,28 @@ import org.apache.commons.httpclient.util.URIUtil;
 import shuffle.SongFactory;
 import tags.Song;
 import tags.Tag;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.Cursor;
 import android.media.AudioManager;
+import android.media.AudioManager.OnAudioFocusChangeListener;
+import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
+import android.media.RemoteControlClient;
 import android.media.audiofx.AudioEffect;
 import android.net.Uri;
 import android.provider.MediaStore;
 import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
 
 public class MusicPlayer {
+
+	private static final String TAG = "MusicPlayer";
 
 	private static MusicPlayer musicPlayer = null;
 	private Context context;
@@ -42,6 +52,43 @@ public class MusicPlayer {
 
 	public static final String CURRENT_SONG = "com.androidplayer.CURRENT_SONG";
 	public static final String SONG_CHANGED = "com.androidplayer.SONG_CHANGED";
+
+	private ComponentName mediaButtonReceiverComponent;
+	private RemoteControlClientCompat remoteControlClientCompat;
+
+	// private RemoteControlClient remoteControlClient;
+	private final OnAudioFocusChangeListener audioFocusListener = new OnAudioFocusChangeListener() {
+
+		public void onAudioFocusChange(int focusChange) {
+			AudioManager am = (AudioManager) context
+					.getSystemService(Context.AUDIO_SERVICE);
+
+			switch (focusChange) {
+			case (AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK):
+				player.setVolume(0.2f, 0.2f);
+				break;
+
+			case (AudioManager.AUDIOFOCUS_LOSS_TRANSIENT):
+				pausePlayback();
+				break;
+
+			case (AudioManager.AUDIOFOCUS_LOSS):
+				pausePlayback();
+				ComponentName component = new ComponentName(context,
+						RemoteControlBroadcastReceiver.class);
+				am.unregisterMediaButtonEventReceiver(component);
+				break;
+
+			case (AudioManager.AUDIOFOCUS_GAIN):
+				player.setVolume(1f, 1f);
+				player.start();
+				break;
+
+			default:
+				break;
+			}
+		}
+	};
 
 	public static synchronized MusicPlayer getInstance(Context context) {
 		if (musicPlayer == null) {
@@ -89,10 +136,18 @@ public class MusicPlayer {
 	}
 
 	public void startPlayback() {
+		if (getAudioFocus()) {
+			remoteControlClientCompat
+					.setPlaybackState(RemoteControlClient.PLAYSTATE_PLAYING);
+		}
 		player.start();
 	}
 
 	public void pausePlayback() {
+		if (getAudioFocus()) {
+			remoteControlClientCompat
+					.setPlaybackState(RemoteControlClient.PLAYSTATE_PAUSED);
+		}
 		player.pause();
 	}
 
@@ -103,6 +158,7 @@ public class MusicPlayer {
 	public void playSong(Song song, boolean start)
 			throws IllegalArgumentException, SecurityException,
 			IllegalStateException, IOException {
+
 		if (player.isPlaying()) {
 			player.stop();
 		}
@@ -110,7 +166,12 @@ public class MusicPlayer {
 		player.setAudioStreamType(AudioManager.STREAM_MUSIC);
 		player.setDataSource(getURLFileName(song.getFileName()));
 		player.prepare();
+
 		if (start) {
+			if (getAudioFocus()) {
+				remoteControlClientCompat
+						.setPlaybackState(RemoteControlClient.PLAYSTATE_PLAYING);
+			}
 			player.start();
 		}
 	}
@@ -252,12 +313,17 @@ public class MusicPlayer {
 			e.printStackTrace();
 		}
 		registerEquilizer();
+		// registerRemoteClient();
+		registerRemoteClient();
+		registerAudioJackListener();
 	}
 
 	private void sendSongChangedRequest() {
 		Intent intent = new Intent(SONG_CHANGED);
 		intent.putExtra(CURRENT_SONG, getCurrentSong());
 		LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
+		// update remote client
+		updateRemoteClientMetaData();
 	}
 
 	private void registerEquilizer() {
@@ -278,5 +344,104 @@ public class MusicPlayer {
 		audioEffectsIntent.putExtra(AudioEffect.EXTRA_PACKAGE_NAME,
 				context.getPackageName());
 		context.sendBroadcast(audioEffectsIntent);
+	}
+
+	private void registerRemoteClient() {
+		AudioManager am = (AudioManager) context
+				.getSystemService(Context.AUDIO_SERVICE);
+		final Intent mediaButtonIntent = new Intent(Intent.ACTION_MEDIA_BUTTON);
+		mediaButtonReceiverComponent = new ComponentName(context,
+				RemoteControlBroadcastReceiver.class);
+		mediaButtonIntent.setComponent(mediaButtonReceiverComponent);
+		remoteControlClientCompat = new RemoteControlClientCompat(
+				PendingIntent.getBroadcast(context, 0, mediaButtonIntent, 0));
+		RemoteControlHelper.registerRemoteControlClient(am,
+				remoteControlClientCompat);
+		final int flags = RemoteControlClient.FLAG_KEY_MEDIA_PREVIOUS
+				| RemoteControlClient.FLAG_KEY_MEDIA_NEXT
+				| RemoteControlClient.FLAG_KEY_MEDIA_PLAY
+				| RemoteControlClient.FLAG_KEY_MEDIA_PAUSE
+				| RemoteControlClient.FLAG_KEY_MEDIA_PLAY_PAUSE
+				| RemoteControlClient.FLAG_KEY_MEDIA_STOP;
+		remoteControlClientCompat.setTransportControlFlags(flags);
+	}
+
+	// private void registerRemoteClient() {
+	// AudioManager audioManager = (AudioManager) context
+	// .getSystemService(Context.AUDIO_SERVICE);
+	//
+	// Intent mediaButtonIntent = new Intent(Intent.ACTION_MEDIA_BUTTON);
+	//
+	// ComponentName remoteComponentName = new ComponentName(context,
+	// RemoteControlBroadcastReceiver.class);
+	// mediaButtonIntent.setComponent(remoteComponentName);
+	//
+	// PendingIntent mediaPendingIntent = PendingIntent.getBroadcast(context,
+	// 0, mediaButtonIntent, 0);
+	//
+	// remoteControlClient = new RemoteControlClient(mediaPendingIntent);
+	// audioManager.registerRemoteControlClient(remoteControlClient);
+	//
+	// remoteControlClient
+	// .setTransportControlFlags(RemoteControlClient.FLAG_KEY_MEDIA_PLAY
+	// | RemoteControlClient.FLAG_KEY_MEDIA_PAUSE
+	// | RemoteControlClient.FLAG_KEY_MEDIA_PREVIOUS
+	// | RemoteControlClient.FLAG_KEY_MEDIA_NEXT);
+	//
+	// audioManager.registerMediaButtonEventReceiver(mediaPendingIntent);
+	// }
+
+	private void updateRemoteClientMetaData() {
+		remoteControlClientCompat
+				.editMetadata(true)
+				.putString(MediaMetadataRetriever.METADATA_KEY_TITLE,
+						getCurrentSong().getTag().title)
+				.putString(MediaMetadataRetriever.METADATA_KEY_ARTIST,
+						getCurrentSong().getTag().artist)
+				.putString(MediaMetadataRetriever.METADATA_KEY_ALBUM,
+						getCurrentSong().getTag().album).apply();
+	}
+
+	private boolean getAudioFocus() {
+		AudioManager am = (AudioManager) context
+				.getSystemService(Context.AUDIO_SERVICE);
+		int result = am.requestAudioFocus(audioFocusListener,
+				AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
+		if (result != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+			Log.i(TAG, "Audio focus not granted");
+			return false;
+		}
+		am.registerMediaButtonEventReceiver(mediaButtonReceiverComponent);
+		return true;
+	}
+
+	private void unregisterRemoteClient() {
+		try {
+			AudioManager audioManager = (AudioManager) context
+					.getSystemService(Context.AUDIO_SERVICE);
+			RemoteControlHelper.unregisterRemoteControlClient(audioManager,
+					remoteControlClientCompat);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Pausing output when the headset is disconnected
+	 */
+	private class NoisyAudioStreamReceiver extends BroadcastReceiver {
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			if (AudioManager.ACTION_AUDIO_BECOMING_NOISY.equals(intent
+					.getAction())) {
+				pausePlayback();
+			}
+		}
+	}
+
+	private void registerAudioJackListener() {
+		IntentFilter noiseFilter = new IntentFilter(
+				AudioManager.ACTION_AUDIO_BECOMING_NOISY);
+		context.registerReceiver(new NoisyAudioStreamReceiver(), noiseFilter);
 	}
 }
