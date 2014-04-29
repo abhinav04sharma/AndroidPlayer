@@ -56,12 +56,15 @@ public class MusicPlayer {
 	private ComponentName mediaButtonReceiverComponent;
 	private RemoteControlClientCompat remoteControlClientCompat;
 
-	// private RemoteControlClient remoteControlClient;
+	private static boolean wasPlaying = false;
 	private final OnAudioFocusChangeListener audioFocusListener = new OnAudioFocusChangeListener() {
 
 		public void onAudioFocusChange(int focusChange) {
 			AudioManager am = (AudioManager) context
 					.getSystemService(Context.AUDIO_SERVICE);
+			
+			if(focusChange != AudioManager.AUDIOFOCUS_GAIN)
+				wasPlaying = isPlaying();
 
 			switch (focusChange) {
 			case (AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK):
@@ -81,7 +84,8 @@ public class MusicPlayer {
 
 			case (AudioManager.AUDIOFOCUS_GAIN):
 				player.setVolume(1f, 1f);
-				player.start();
+				if (wasPlaying)
+					startPlayback();
 				break;
 
 			default:
