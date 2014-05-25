@@ -94,5 +94,4 @@ public class MainActivity extends FragmentActivity implements TabListener {
 			super.onBackPressed();
 		}
 	}
-
 }

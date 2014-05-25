@@ -55,6 +55,11 @@ public class SearchResultsActivity extends Activity {
 	}
 
 	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+	}
+
+	@Override
 	protected void onNewIntent(Intent intent) {
 		setIntent(intent);
 		handleIntent(intent);
@@ -65,15 +70,17 @@ public class SearchResultsActivity extends Activity {
 			String search = intent.getStringExtra(SearchManager.QUERY);
 			List<Song> list = musicPlayer.getSongs();
 			for (Song s : list) {
-				String concat = s.getTag().title + "\t" + s.getTag().artist + "\t" + s.getTag().album; 
+				String concat = s.getTag().title + "\t" + s.getTag().artist
+						+ "\t" + s.getTag().album;
 				if (concat.length() >= search.length()) {
-					if (concat.toUpperCase(Locale.getDefault())
-							.contains(search.toUpperCase(Locale.getDefault()))) {
+					if (concat.toUpperCase(Locale.getDefault()).contains(
+							search.toUpperCase(Locale.getDefault()))) {
 						searchList.add(s);
 					}
 				}
 			}
-			adapter = new SongListAdapter(this, R.layout.listview_row_layout, searchList.toArray(new Song[] {}));
+			adapter = new SongListAdapter(this, R.layout.listview_row_layout,
+					searchList.toArray(new Song[] {}));
 			listView.setAdapter(adapter);
 		}
 	}

@@ -19,9 +19,9 @@ import com.androidplayer.R;
 public class AndroidPlayerWidgetProvider extends AppWidgetProvider {
 
 	private static MusicPlayer musicPlayer = null;
-	public static final String ACTION_WIDGET_PLAY = "com.androidplayer.ActionWidgetPlay";
-	public static final String ACTION_WIDGET_SKIP = "com.androidplayer.ActionWidgetSkip";
-	public static final String ACTION_WIDGET_PREV = "com.androidplayer.ActionWidgetPrev";
+	public static final String ACTION_WIDGET_PLAY = "com.androidplayer.widgets.AndroidPlayerWidgetProvider.ActionWidgetPlay";
+	public static final String ACTION_WIDGET_SKIP = "com.androidplayer.widgets.AndroidPlayerWidgetProvider.ActionWidgetSkip";
+	public static final String ACTION_WIDGET_PREV = "com.androidplayer.widgets.AndroidPlayerWidgetProvider.ActionWidgetPrev";
 
 	private BroadcastReceiver songChangedReceiver = new BroadcastReceiver() {
 		@Override
@@ -38,9 +38,9 @@ public class AndroidPlayerWidgetProvider extends AppWidgetProvider {
 
 		LocalBroadcastManager.getInstance(context)
 				.registerReceiver(songChangedReceiver,
-						new IntentFilter(MusicPlayer.SONG_CHANGED));
+						new IntentFilter(MusicPlayer.META_CHANGED));
 
-		musicPlayer = MusicPlayer.getInstance(context);
+		musicPlayer = MusicPlayer.getInstance(context.getApplicationContext());
 		RemoteViews remoteViews = new RemoteViews(context.getPackageName(),
 				R.layout.androidplayer_appwidget);
 		ComponentName watchWidget = new ComponentName(context,
@@ -80,17 +80,29 @@ public class AndroidPlayerWidgetProvider extends AppWidgetProvider {
 	}
 
 	@Override
-	public void onDeleted(Context context, int[] appWidgetIds) {
+	public void onEnabled(Context context) {
+		super.onEnabled(context);
+		LocalBroadcastManager.getInstance(context)
+				.registerReceiver(songChangedReceiver,
+						new IntentFilter(MusicPlayer.META_CHANGED));
+	}
+
+	@Override
+	public void onDisabled(Context context) {
 		LocalBroadcastManager.getInstance(context).unregisterReceiver(
 				songChangedReceiver);
-		super.onDeleted(context, appWidgetIds);
+		super.onDisabled(context);
 	}
 
 	@Override
 	public void onReceive(Context context, Intent intent) {
-		musicPlayer = MusicPlayer.getInstance(context);
+		musicPlayer = MusicPlayer.getInstance(context.getApplicationContext());
 		try {
-			if (intent.getAction().equals(ACTION_WIDGET_PLAY)) {
+			/*
+			 * if (intent.getAction().equals(MusicPlayer.META_CHANGED)) {
+			 * setSong((Song) intent
+			 * .getSerializableExtra(MusicPlayer.CURRENT_SONG), context); } else
+			 */if (intent.getAction().equals(ACTION_WIDGET_PLAY)) {
 				if (musicPlayer.isPlaying()) {
 					musicPlayer.pausePlayback();
 				} else {

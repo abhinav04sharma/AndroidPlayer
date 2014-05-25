@@ -35,16 +35,21 @@ public class SongListFragment extends Fragment implements FragmentInterface {
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
 			Bundle savedInstanceState) {
 
-		this.rootView = inflater.inflate(R.layout.listview_fragment,
-				container, false);
+		this.rootView = inflater.inflate(R.layout.listview_fragment, container,
+				false);
+		musicPlayer = MusicPlayer.getInstance(getActivity()
+				.getApplicationContext());
 		createView();
 		setRetainInstance(true);
 		return rootView;
 	}
 
+	@Override
+	public void onDestroy() {
+		super.onDestroy();
+	}
+
 	public void createView() {
-		musicPlayer = MusicPlayer.getInstance(getActivity()
-				.getApplicationContext());
 		constructControls();
 		registerListeners();
 	}
@@ -56,7 +61,8 @@ public class SongListFragment extends Fragment implements FragmentInterface {
 			constructList();
 			isListConstructed = true;
 		}
-		adapter = new SongListAdapter(getActivity(), R.layout.listview_row_layout, list.toArray(new Song[]{}));
+		adapter = new SongListAdapter(getActivity(),
+				R.layout.listview_row_layout, list.toArray(new Song[] {}));
 		listView.setAdapter(adapter);
 	}
 

@@ -50,26 +50,27 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 			Bundle savedInstanceState) {
 		this.rootView = inflater.inflate(R.layout.now_playing_fragment,
 				container, false);
+		LocalBroadcastManager
+				.getInstance(getActivity().getApplicationContext())
+				.registerReceiver(broadCastReveiver,
+						new IntentFilter(MusicPlayer.META_CHANGED));
+		musicPlayer = MusicPlayer.getInstance(getActivity()
+				.getApplicationContext());
 		createView();
+
 		return rootView;
 	}
 
 	@Override
 	public void onDestroy() {
-		LocalBroadcastManager.getInstance(getActivity().getApplicationContext()).unregisterReceiver(broadCastReveiver);
+		LocalBroadcastManager
+				.getInstance(getActivity().getApplicationContext())
+				.unregisterReceiver(broadCastReveiver);
 		super.onDestroy();
 	}
 
 	public void createView() {
 		// receiver for when song changes
-		LocalBroadcastManager
-				.getInstance(getActivity().getApplicationContext())
-				.registerReceiver(broadCastReveiver,
-						new IntentFilter(MusicPlayer.SONG_CHANGED));
-
-		musicPlayer = MusicPlayer.getInstance(getActivity()
-				.getApplicationContext());
-
 		constructControls();
 		registerListeners();
 

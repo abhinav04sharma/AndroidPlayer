@@ -33,14 +33,19 @@ public class MoodListFragment extends Fragment implements FragmentInterface {
 
 		this.rootView = inflater.inflate(R.layout.listview_fragment, container,
 				false);
+		musicPlayer = MusicPlayer.getInstance(getActivity()
+				.getApplicationContext());
 		createView();
 		setRetainInstance(true);
 		return rootView;
 	}
 
+	@Override
+	public void onDestroy() {
+		super.onDestroy();
+	}
+
 	public void createView() {
-		musicPlayer = MusicPlayer.getInstance(getActivity()
-				.getApplicationContext());
 		constructControls();
 		registerListeners();
 	}

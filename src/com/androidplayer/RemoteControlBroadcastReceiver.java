@@ -50,7 +50,11 @@ public class RemoteControlBroadcastReceiver extends BroadcastReceiver {
 			}
 			break;
 		default:
-			return;
+			try {
+				throw new Exception("Unrecognized message");
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 	}
 }

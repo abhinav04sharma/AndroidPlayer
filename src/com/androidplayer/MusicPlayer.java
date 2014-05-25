@@ -15,7 +15,10 @@ import org.apache.commons.httpclient.util.URIUtil;
 import shuffle.SongFactory;
 import tags.Song;
 import tags.Tag;
+import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.appwidget.AppWidgetManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -31,39 +34,50 @@ import android.media.RemoteControlClient;
 import android.media.audiofx.AudioEffect;
 import android.net.Uri;
 import android.provider.MediaStore;
+import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
+import android.widget.RemoteViews;
 
-public class MusicPlayer {
+import com.androidplayer.widgets.AndroidPlayerWidgetProvider;
+
+public class MusicPlayer extends BroadcastReceiver {
 
 	private static final String TAG = "MusicPlayer";
+	private static final int NOTIFICATION_ID = 1001;
+
+	public static final String META_CHANGED = "com.androidplayer.MusicPlayer.META_CHANGED";
+	public static final String CURRENT_SONG = "com.androidplayer.MusicPlayer.META.CURRENT_SONG";
+	public static final String IS_PLAYING = "com.androidplayer.MusicPlayer.META.IS_PLAYING";
+
+	private static boolean wasPlaying = false;
 
 	private static MusicPlayer musicPlayer = null;
-	private Context context;
+	private static int numClients;
 
-	private final String GENRES_META_FILE_NAME = "GENRES_META_FILE.txt";
+	private final Context context;
 
 	private final List<Song> songs = new ArrayList<Song>();
 	private final List<String> artists = new ArrayList<String>();
 	private final List<String> genres = new ArrayList<String>();
 
-	public static final SongFactory songFactory = new SongFactory();
-	public static final MediaPlayer player = new MediaPlayer();
+	public final SongFactory songFactory = new SongFactory();
+	public final MediaPlayer player = new MediaPlayer();
 
-	public static final String CURRENT_SONG = "com.androidplayer.CURRENT_SONG";
-	public static final String SONG_CHANGED = "com.androidplayer.SONG_CHANGED";
-
-	private ComponentName mediaButtonReceiverComponent;
+	private final ComponentName mediaButtonReceiverComponent;
 	private RemoteControlClientCompat remoteControlClientCompat;
 
-	private static boolean wasPlaying = false;
+	private final RemoteViews notificationView;
+
+	private final NoisyAudioStreamReceiver noisyAudioStreamReceiver = new NoisyAudioStreamReceiver();
+
 	private final OnAudioFocusChangeListener audioFocusListener = new OnAudioFocusChangeListener() {
 
 		public void onAudioFocusChange(int focusChange) {
 			AudioManager am = (AudioManager) context
 					.getSystemService(Context.AUDIO_SERVICE);
-			
-			if(focusChange != AudioManager.AUDIOFOCUS_GAIN)
+
+			if (focusChange != AudioManager.AUDIOFOCUS_GAIN)
 				wasPlaying = isPlaying();
 
 			switch (focusChange) {
@@ -96,14 +110,31 @@ public class MusicPlayer {
 
 	public static synchronized MusicPlayer getInstance(Context context) {
 		if (musicPlayer == null) {
-			musicPlayer = new MusicPlayer();
-			musicPlayer.initialize(context);
+			musicPlayer = new MusicPlayer(context);
+			musicPlayer.initialize();
+			musicPlayer.initializeWidgets();
+
+			try {
+				musicPlayer.playSong(musicPlayer.getCurrentSong(), false);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 
 			return musicPlayer;
 		}
+		++numClients;
 		// send a song change request each time the music player is initialized
-		musicPlayer.sendSongChangedRequest();
+		musicPlayer.sendMetaChangedRequest();
 		return musicPlayer;
+	}
+
+	// TODO: figure out when to call this
+	public static synchronized void revokeInstance() {
+		--numClients;
+		if (numClients == 0) {
+			musicPlayer.finalize();
+			musicPlayer = null;
+		}
 	}
 
 	public List<Song> getSongs() {
@@ -118,20 +149,20 @@ public class MusicPlayer {
 		double duration = player.getCurrentPosition() / 1000;
 		double maxDuration = player.getDuration() / 1000;
 		songFactory.setCurrent(duration, maxDuration, song);
-		sendSongChangedRequest();
+		sendMetaChangedRequest();
 	}
 
 	public Song getPrev() {
 		Song ret = songFactory.prev(player.getCurrentPosition() / 1000,
 				player.getDuration() / 1000);
-		sendSongChangedRequest();
+		sendMetaChangedRequest();
 		return ret;
 	}
 
 	public Song getNext() {
 		Song ret = songFactory.next(player.getCurrentPosition() / 1000,
 				player.getDuration() / 1000);
-		sendSongChangedRequest();
+		sendMetaChangedRequest();
 		return ret;
 	}
 
@@ -145,6 +176,8 @@ public class MusicPlayer {
 					.setPlaybackState(RemoteControlClient.PLAYSTATE_PLAYING);
 		}
 		player.start();
+		musicPlayer.createNotification();
+		sendMetaChangedRequest();
 	}
 
 	public void pausePlayback() {
@@ -153,6 +186,8 @@ public class MusicPlayer {
 					.setPlaybackState(RemoteControlClient.PLAYSTATE_PAUSED);
 		}
 		player.pause();
+		sendMetaChangedRequest();
+		closeNotification();
 	}
 
 	public void seek(int msec) {
@@ -171,20 +206,22 @@ public class MusicPlayer {
 		player.setDataSource(getURLFileName(song.getFileName()));
 		player.prepare();
 
-		if (start) {
-			if (getAudioFocus()) {
-				remoteControlClientCompat
-						.setPlaybackState(RemoteControlClient.PLAYSTATE_PLAYING);
-			}
-			player.start();
-		}
+		if (start)
+			startPlayback();
+		else
+			sendMetaChangedRequest();
 	}
 
 	public MediaPlayer getMediaPlayer() {
 		return player;
 	}
 
-	private MusicPlayer() {
+	private MusicPlayer(Context context) {
+		this.context = context;
+		mediaButtonReceiverComponent = new ComponentName(context,
+				RemoteControlBroadcastReceiver.class);
+		notificationView = new RemoteViews(context.getPackageName(),
+				R.layout.notification_template);
 	}
 
 	private String getURLFileName(String filename) {
@@ -198,7 +235,7 @@ public class MusicPlayer {
 
 	private void readGenresFromFile() throws IOException {
 		BufferedReader br = new BufferedReader(new InputStreamReader(getClass()
-				.getResourceAsStream("/" + GENRES_META_FILE_NAME)));
+				.getResourceAsStream("/" + "GENRES_META_FILE.txt")));
 		String line;
 		while ((line = br.readLine()) != null) {
 			genres.add(line);
@@ -292,8 +329,7 @@ public class MusicPlayer {
 		}
 	}
 
-	private void initialize(Context context) {
-		this.context = context;
+	private void initialize() {
 		try {
 			constructLists();
 		} catch (IOException e1) {
@@ -311,23 +347,28 @@ public class MusicPlayer {
 			}
 		});
 
-		try {
-			playSong(getCurrentSong(), false);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
 		registerEquilizer();
-		// registerRemoteClient();
 		registerRemoteClient();
 		registerAudioJackListener();
 	}
 
-	private void sendSongChangedRequest() {
-		Intent intent = new Intent(SONG_CHANGED);
+	public void finalize() {
+		unRegisterAudioJackListener();
+		unRegisterRemoteClient();
+		unRegisterEquilizer();
+		closeNotification();
+	}
+
+	// TODO: Figure out when to call this
+	private void sendMetaChangedRequest() {
+		Intent intent = new Intent(META_CHANGED);
 		intent.putExtra(CURRENT_SONG, getCurrentSong());
+		intent.putExtra(IS_PLAYING, isPlaying());
 		LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
 		// update remote client
 		updateRemoteClientMetaData();
+		// update notification view
+		updateNotificationView();
 	}
 
 	private void registerEquilizer() {
@@ -350,60 +391,16 @@ public class MusicPlayer {
 		context.sendBroadcast(audioEffectsIntent);
 	}
 
-	private void registerRemoteClient() {
-		AudioManager am = (AudioManager) context
-				.getSystemService(Context.AUDIO_SERVICE);
-		final Intent mediaButtonIntent = new Intent(Intent.ACTION_MEDIA_BUTTON);
-		mediaButtonReceiverComponent = new ComponentName(context,
-				RemoteControlBroadcastReceiver.class);
-		mediaButtonIntent.setComponent(mediaButtonReceiverComponent);
-		remoteControlClientCompat = new RemoteControlClientCompat(
-				PendingIntent.getBroadcast(context, 0, mediaButtonIntent, 0));
-		RemoteControlHelper.registerRemoteControlClient(am,
-				remoteControlClientCompat);
-		final int flags = RemoteControlClient.FLAG_KEY_MEDIA_PREVIOUS
-				| RemoteControlClient.FLAG_KEY_MEDIA_NEXT
-				| RemoteControlClient.FLAG_KEY_MEDIA_PLAY
-				| RemoteControlClient.FLAG_KEY_MEDIA_PAUSE
-				| RemoteControlClient.FLAG_KEY_MEDIA_PLAY_PAUSE
-				| RemoteControlClient.FLAG_KEY_MEDIA_STOP;
-		remoteControlClientCompat.setTransportControlFlags(flags);
-	}
-
-	// private void registerRemoteClient() {
-	// AudioManager audioManager = (AudioManager) context
-	// .getSystemService(Context.AUDIO_SERVICE);
-	//
-	// Intent mediaButtonIntent = new Intent(Intent.ACTION_MEDIA_BUTTON);
-	//
-	// ComponentName remoteComponentName = new ComponentName(context,
-	// RemoteControlBroadcastReceiver.class);
-	// mediaButtonIntent.setComponent(remoteComponentName);
-	//
-	// PendingIntent mediaPendingIntent = PendingIntent.getBroadcast(context,
-	// 0, mediaButtonIntent, 0);
-	//
-	// remoteControlClient = new RemoteControlClient(mediaPendingIntent);
-	// audioManager.registerRemoteControlClient(remoteControlClient);
-	//
-	// remoteControlClient
-	// .setTransportControlFlags(RemoteControlClient.FLAG_KEY_MEDIA_PLAY
-	// | RemoteControlClient.FLAG_KEY_MEDIA_PAUSE
-	// | RemoteControlClient.FLAG_KEY_MEDIA_PREVIOUS
-	// | RemoteControlClient.FLAG_KEY_MEDIA_NEXT);
-	//
-	// audioManager.registerMediaButtonEventReceiver(mediaPendingIntent);
-	// }
-
-	private void updateRemoteClientMetaData() {
-		remoteControlClientCompat
-				.editMetadata(true)
-				.putString(MediaMetadataRetriever.METADATA_KEY_TITLE,
-						getCurrentSong().getTag().title)
-				.putString(MediaMetadataRetriever.METADATA_KEY_ARTIST,
-						getCurrentSong().getTag().artist)
-				.putString(MediaMetadataRetriever.METADATA_KEY_ALBUM,
-						getCurrentSong().getTag().album).apply();
+	private void initializeWidgets() {
+		AppWidgetManager appWidgetManager = AppWidgetManager
+				.getInstance(context);
+		int[] appWidgetIds = appWidgetManager
+				.getAppWidgetIds(new ComponentName(context,
+						AndroidPlayerWidgetProvider.class));
+		if (appWidgetIds.length > 0) {
+			new AndroidPlayerWidgetProvider().onUpdate(context,
+					appWidgetManager, appWidgetIds);
+		}
 	}
 
 	private boolean getAudioFocus() {
@@ -419,7 +416,36 @@ public class MusicPlayer {
 		return true;
 	}
 
-	private void unregisterRemoteClient() {
+	private void registerRemoteClient() {
+		AudioManager am = (AudioManager) context
+				.getSystemService(Context.AUDIO_SERVICE);
+		final Intent mediaButtonIntent = new Intent(Intent.ACTION_MEDIA_BUTTON);
+		mediaButtonIntent.setComponent(mediaButtonReceiverComponent);
+		remoteControlClientCompat = new RemoteControlClientCompat(
+				PendingIntent.getBroadcast(context, 0, mediaButtonIntent, 0));
+		RemoteControlHelper.registerRemoteControlClient(am,
+				remoteControlClientCompat);
+		final int flags = RemoteControlClient.FLAG_KEY_MEDIA_PREVIOUS
+				| RemoteControlClient.FLAG_KEY_MEDIA_NEXT
+				| RemoteControlClient.FLAG_KEY_MEDIA_PLAY
+				| RemoteControlClient.FLAG_KEY_MEDIA_PAUSE
+				| RemoteControlClient.FLAG_KEY_MEDIA_PLAY_PAUSE
+				| RemoteControlClient.FLAG_KEY_MEDIA_STOP;
+		remoteControlClientCompat.setTransportControlFlags(flags);
+	}
+
+	private void updateRemoteClientMetaData() {
+		remoteControlClientCompat
+				.editMetadata(true)
+				.putString(MediaMetadataRetriever.METADATA_KEY_TITLE,
+						getCurrentSong().getTag().title)
+				.putString(MediaMetadataRetriever.METADATA_KEY_ARTIST,
+						getCurrentSong().getTag().artist)
+				.putString(MediaMetadataRetriever.METADATA_KEY_ALBUM,
+						getCurrentSong().getTag().album).apply();
+	}
+
+	private void unRegisterRemoteClient() {
 		try {
 			AudioManager audioManager = (AudioManager) context
 					.getSystemService(Context.AUDIO_SERVICE);
@@ -446,6 +472,97 @@ public class MusicPlayer {
 	private void registerAudioJackListener() {
 		IntentFilter noiseFilter = new IntentFilter(
 				AudioManager.ACTION_AUDIO_BECOMING_NOISY);
-		context.registerReceiver(new NoisyAudioStreamReceiver(), noiseFilter);
+		context.registerReceiver(noisyAudioStreamReceiver, noiseFilter);
+	}
+
+	private void unRegisterAudioJackListener() {
+		context.unregisterReceiver(noisyAudioStreamReceiver);
+	}
+
+	private static final String PLAY_PAUSE_INTENT = "com.androidplayer.MusicPlayer.INTENT.PlayPause";
+	private static final String PREV_INTENT = "com.androidplayer.MusicPlayer.INTENT.Previous";
+	private static final String NEXT_INTENT = "com.androidplayer.MusicPlayer.INTENT.Next";
+	private static final String COLLAPSE_INTENT = "com.androidplayer.MusicPlayer.INTENT.Collapse";
+
+	private void createNotification() {
+		IntentFilter intentFilter = new IntentFilter();
+		intentFilter.addAction(NEXT_INTENT);
+		intentFilter.addAction(PREV_INTENT);
+		intentFilter.addAction(PLAY_PAUSE_INTENT);
+		intentFilter.addAction(COLLAPSE_INTENT);
+
+		context.registerReceiver(this, intentFilter);
+
+		Intent action = new Intent(PLAY_PAUSE_INTENT);
+		PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0,
+				action, PendingIntent.FLAG_CANCEL_CURRENT);
+		notificationView.setOnClickPendingIntent(R.id.notification_base_play,
+				pendingIntent);
+
+		action = new Intent(PREV_INTENT);
+		pendingIntent = PendingIntent.getBroadcast(context, 0, action,
+				PendingIntent.FLAG_CANCEL_CURRENT);
+		notificationView.setOnClickPendingIntent(
+				R.id.notification_base_previous, pendingIntent);
+
+		action = new Intent(NEXT_INTENT);
+		pendingIntent = PendingIntent.getBroadcast(context, 0, action,
+				PendingIntent.FLAG_CANCEL_CURRENT);
+		notificationView.setOnClickPendingIntent(R.id.notification_base_next,
+				pendingIntent);
+
+		action = new Intent(COLLAPSE_INTENT);
+		pendingIntent = PendingIntent.getBroadcast(context, 0, action,
+				PendingIntent.FLAG_CANCEL_CURRENT);
+		notificationView.setOnClickPendingIntent(
+				R.id.notification_base_collapse, pendingIntent);
+
+		updateNotificationView();
+	}
+
+	private void closeNotification() {
+		NotificationManager mNotificationManager = (NotificationManager) context
+				.getSystemService(Context.NOTIFICATION_SERVICE);
+		mNotificationManager.cancel(NOTIFICATION_ID);
+	}
+
+	private void updateNotificationView() {
+		notificationView.setTextViewText(R.id.notification_base_line_one,
+				musicPlayer.getCurrentSong().getTag().title);
+		notificationView.setTextViewText(R.id.notification_base_line_two,
+				musicPlayer.getCurrentSong().getTag().artist);
+
+		NotificationCompat.Builder builder = new NotificationCompat.Builder(
+				context).setSmallIcon(R.drawable.ic_launcher).setContent(
+				notificationView);
+		NotificationManager notificationManager = (NotificationManager) context
+				.getSystemService(Context.NOTIFICATION_SERVICE);
+		Notification notification = builder.build();
+		notification.flags |= Notification.FLAG_NO_CLEAR;
+		notificationManager.notify(NOTIFICATION_ID, notification);
+	}
+
+	@Override
+	public void onReceive(Context context, Intent intent) {
+		if (PLAY_PAUSE_INTENT.equals(intent.getAction())) {
+			if (isPlaying())
+				pausePlayback();
+			else
+				startPlayback();
+		} else if (PREV_INTENT.equals(intent.getAction())) {
+			try {
+				playSong(getPrev(), isPlaying());
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		} else if (NEXT_INTENT.equals(intent.getAction())) {
+			try {
+				playSong(getNext(), isPlaying());
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		} else if (COLLAPSE_INTENT.equals(intent.getAction())) {
+			pausePlayback();
+		}
 	}
 }

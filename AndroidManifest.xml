@@ -49,6 +49,7 @@
         <receiver android:name="com.androidplayer.widgets.AndroidPlayerWidgetProvider" >
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.media.AUDIO_BECOMING_NOISY" />
                 <action android:name="com.androidplayer.widgets.AndroidPlayerWidgetProvider.ACTION_WIDGET_PLAY" />
                 <action android:name="com.androidplayer.widgets.AndroidPlayerWidgetProvider.ACTION_WIDGET_SKIP" />
                 <action android:name="com.androidplayer.widgets.AndroidPlayerWidgetProvider.ACTION_WIDGET_PREV" />
