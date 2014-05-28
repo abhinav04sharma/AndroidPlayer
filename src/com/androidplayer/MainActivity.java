@@ -94,4 +94,23 @@ public class MainActivity extends FragmentActivity implements TabListener {
 			super.onBackPressed();
 		}
 	}
+
+	@Override
+	protected void onPause() {
+		MusicPlayer.getInstance(this).createNotification();
+		super.onPause();
+	}
+
+	@Override
+	protected void onResume() {
+		MusicPlayer.getInstance(this).closeNotification();
+		super.onResume();
+	}
+
+	@Override
+	protected void onDestroy() {
+		MusicPlayer.getInstance(this).finalize();
+		super.onDestroy();
+	}
+
 }

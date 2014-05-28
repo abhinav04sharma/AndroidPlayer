@@ -50,9 +50,9 @@ public class MusicPlayer extends BroadcastReceiver {
 	public static final String CURRENT_SONG = "com.androidplayer.MusicPlayer.META.CURRENT_SONG";
 	public static final String IS_PLAYING = "com.androidplayer.MusicPlayer.META.IS_PLAYING";
 
-	private static boolean wasPlaying = false;
+	private static boolean wasPlaying;
 
-	private static MusicPlayer musicPlayer = null;
+	private static MusicPlayer musicPlayer;
 	private static int numClients;
 
 	private final Context context;
@@ -68,6 +68,7 @@ public class MusicPlayer extends BroadcastReceiver {
 	private RemoteControlClientCompat remoteControlClientCompat;
 
 	private final RemoteViews notificationView;
+	private boolean isNotificationCreated;
 
 	private final NoisyAudioStreamReceiver noisyAudioStreamReceiver = new NoisyAudioStreamReceiver();
 
@@ -149,20 +150,17 @@ public class MusicPlayer extends BroadcastReceiver {
 		double duration = player.getCurrentPosition() / 1000;
 		double maxDuration = player.getDuration() / 1000;
 		songFactory.setCurrent(duration, maxDuration, song);
-		sendMetaChangedRequest();
 	}
 
 	public Song getPrev() {
 		Song ret = songFactory.prev(player.getCurrentPosition() / 1000,
 				player.getDuration() / 1000);
-		sendMetaChangedRequest();
 		return ret;
 	}
 
 	public Song getNext() {
 		Song ret = songFactory.next(player.getCurrentPosition() / 1000,
 				player.getDuration() / 1000);
-		sendMetaChangedRequest();
 		return ret;
 	}
 
@@ -171,23 +169,13 @@ public class MusicPlayer extends BroadcastReceiver {
 	}
 
 	public void startPlayback() {
-		if (getAudioFocus()) {
-			remoteControlClientCompat
-					.setPlaybackState(RemoteControlClient.PLAYSTATE_PLAYING);
-		}
 		player.start();
-		musicPlayer.createNotification();
 		sendMetaChangedRequest();
 	}
 
 	public void pausePlayback() {
-		if (getAudioFocus()) {
-			remoteControlClientCompat
-					.setPlaybackState(RemoteControlClient.PLAYSTATE_PAUSED);
-		}
 		player.pause();
 		sendMetaChangedRequest();
-		closeNotification();
 	}
 
 	public void seek(int msec) {
@@ -206,10 +194,10 @@ public class MusicPlayer extends BroadcastReceiver {
 		player.setDataSource(getURLFileName(song.getFileName()));
 		player.prepare();
 
+		sendMetaChangedRequest();
+
 		if (start)
 			startPlayback();
-		else
-			sendMetaChangedRequest();
 	}
 
 	public MediaPlayer getMediaPlayer() {
@@ -443,6 +431,16 @@ public class MusicPlayer extends BroadcastReceiver {
 						getCurrentSong().getTag().artist)
 				.putString(MediaMetadataRetriever.METADATA_KEY_ALBUM,
 						getCurrentSong().getTag().album).apply();
+		if (getAudioFocus()) {
+			if (isPlaying()) {
+				remoteControlClientCompat
+						.setPlaybackState(RemoteControlClient.PLAYSTATE_PLAYING);
+			} else {
+				remoteControlClientCompat
+						.setPlaybackState(RemoteControlClient.PLAYSTATE_PAUSED);
+
+			}
+		}
 	}
 
 	private void unRegisterRemoteClient() {
@@ -484,7 +482,12 @@ public class MusicPlayer extends BroadcastReceiver {
 	private static final String NEXT_INTENT = "com.androidplayer.MusicPlayer.INTENT.Next";
 	private static final String COLLAPSE_INTENT = "com.androidplayer.MusicPlayer.INTENT.Collapse";
 
-	private void createNotification() {
+	public void createNotification() {
+		if (isNotificationCreated) {
+			return;
+		}
+
+		isNotificationCreated = true;
 		IntentFilter intentFilter = new IntentFilter();
 		intentFilter.addAction(NEXT_INTENT);
 		intentFilter.addAction(PREV_INTENT);
@@ -520,13 +523,20 @@ public class MusicPlayer extends BroadcastReceiver {
 		updateNotificationView();
 	}
 
-	private void closeNotification() {
+	public void closeNotification() {
+		if (!isNotificationCreated) {
+			return;
+		}
 		NotificationManager mNotificationManager = (NotificationManager) context
 				.getSystemService(Context.NOTIFICATION_SERVICE);
 		mNotificationManager.cancel(NOTIFICATION_ID);
+		isNotificationCreated = false;
 	}
 
 	private void updateNotificationView() {
+		if (!isNotificationCreated) {
+			return;
+		}
 		notificationView.setTextViewText(R.id.notification_base_line_one,
 				musicPlayer.getCurrentSong().getTag().title);
 		notificationView.setTextViewText(R.id.notification_base_line_two,
@@ -563,6 +573,7 @@ public class MusicPlayer extends BroadcastReceiver {
 			}
 		} else if (COLLAPSE_INTENT.equals(intent.getAction())) {
 			pausePlayback();
+			closeNotification();
 		}
 	}
 }

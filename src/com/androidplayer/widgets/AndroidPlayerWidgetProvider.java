@@ -98,15 +98,12 @@ public class AndroidPlayerWidgetProvider extends AppWidgetProvider {
 	public void onReceive(Context context, Intent intent) {
 		musicPlayer = MusicPlayer.getInstance(context.getApplicationContext());
 		try {
-			/*
-			 * if (intent.getAction().equals(MusicPlayer.META_CHANGED)) {
-			 * setSong((Song) intent
-			 * .getSerializableExtra(MusicPlayer.CURRENT_SONG), context); } else
-			 */if (intent.getAction().equals(ACTION_WIDGET_PLAY)) {
+			 if (intent.getAction().equals(ACTION_WIDGET_PLAY)) {
 				if (musicPlayer.isPlaying()) {
 					musicPlayer.pausePlayback();
 				} else {
 					musicPlayer.startPlayback();
+					musicPlayer.createNotification();
 				}
 			} else if (intent.getAction().equals(ACTION_WIDGET_SKIP)) {
 				musicPlayer.playSong(musicPlayer.getNext(),
