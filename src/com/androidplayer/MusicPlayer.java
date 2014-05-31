@@ -527,6 +527,7 @@ public class MusicPlayer extends BroadcastReceiver {
 		if (!isNotificationCreated) {
 			return;
 		}
+		context.unregisterReceiver(this);
 		NotificationManager mNotificationManager = (NotificationManager) context
 				.getSystemService(Context.NOTIFICATION_SERVICE);
 		mNotificationManager.cancel(NOTIFICATION_ID);

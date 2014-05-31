@@ -21,7 +21,8 @@ public class MainActivity extends FragmentActivity implements TabListener {
 	private ViewPager viewPager;
 	private TabsPagerAdapter mAdapter;
 	private ActionBar actionBar;
-	private String[] tabs = { "Now Playing", "All Songs", "Mood List" };
+	private String[] tabs = { "Now Playing", "All Songs", "Mood List",
+			"Artists", "Albums", "Genres" };
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -109,7 +110,6 @@ public class MainActivity extends FragmentActivity implements TabListener {
 
 	@Override
 	protected void onDestroy() {
-		MusicPlayer.getInstance(this).finalize();
 		super.onDestroy();
 	}
 

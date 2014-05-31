@@ -19,6 +19,9 @@ import com.androidplayer.adapters.SongListAdapter;
 
 public class SearchResultsActivity extends Activity {
 
+	public static String KEY_SELECT_ACTION = "com.androidplayer.KEY_SELECT_ACTION";
+	public static String SONG_LIST = "com.androidplayer.SONG_LIST";
+
 	private static ListView listView;
 
 	private static SongListAdapter adapter;
@@ -78,6 +81,17 @@ public class SearchResultsActivity extends Activity {
 						searchList.add(s);
 					}
 				}
+			}
+			adapter = new SongListAdapter(this, R.layout.listview_row_layout,
+					searchList.toArray(new Song[] {}));
+			listView.setAdapter(adapter);
+
+		} else if (KEY_SELECT_ACTION.equals(intent.getAction())) {
+			@SuppressWarnings("unchecked")
+			List<Song> values = (List<Song>) intent
+					.getSerializableExtra(SONG_LIST);
+			for (Song s : values) {
+				searchList.add(s);
 			}
 			adapter = new SongListAdapter(this, R.layout.listview_row_layout,
 					searchList.toArray(new Song[] {}));
