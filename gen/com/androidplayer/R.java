@@ -47,14 +47,15 @@ public final class R {
         public static final int ic_action_play=0x7f020003;
         public static final int ic_action_previous=0x7f020004;
         public static final int ic_action_search=0x7f020005;
-        public static final int ic_launcher=0x7f020006;
+        public static final int ic_default_cover_art=0x7f020006;
+        public static final int ic_launcher=0x7f020007;
     }
     public static final class id {
         public static final int action_search=0x7f0a001b;
         public static final int artist=0x7f0a000a;
-        public static final int currentArtist=0x7f0a0015;
-        public static final int currentGenre=0x7f0a0016;
-        public static final int currentSong=0x7f0a0014;
+        public static final int coverArt=0x7f0a0018;
+        public static final int currentArtist=0x7f0a001a;
+        public static final int currentSong=0x7f0a0019;
         public static final int listView=0x7f0a0008;
         public static final int list_view_fragment=0x7f0a0007;
         public static final int notification_base=0x7f0a000b;
@@ -67,11 +68,11 @@ public final class R {
         public static final int notification_base_previous=0x7f0a000f;
         public static final int now_playing_fragment=0x7f0a0013;
         public static final int pager=0x7f0a0000;
-        public static final int play=0x7f0a0019;
-        public static final int prev=0x7f0a001a;
+        public static final int play=0x7f0a0016;
+        public static final int prev=0x7f0a0017;
         public static final int searchList=0x7f0a0001;
-        public static final int seekBar=0x7f0a0017;
-        public static final int skip=0x7f0a0018;
+        public static final int seekBar=0x7f0a0014;
+        public static final int skip=0x7f0a0015;
         public static final int song=0x7f0a0009;
         public static final int widget=0x7f0a0002;
         public static final int widget_current_song=0x7f0a0006;
@@ -98,6 +99,7 @@ public final class R {
         public static final int currentArtist=0x7f060005;
         public static final int currentGenre=0x7f060006;
         public static final int currentSong=0x7f060004;
+        public static final int default_cover_art=0x7f06000b;
         public static final int listButton=0x7f060008;
         public static final int play=0x7f060002;
         public static final int prev=0x7f060007;

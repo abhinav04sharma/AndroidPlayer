@@ -5,6 +5,9 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.media.MediaMetadataRetriever;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.app.Fragment;
@@ -14,6 +17,7 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
@@ -27,9 +31,9 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 	private static ImageButton skip;
 	private static ImageButton prev;
 
+	private static ImageView coverArt;
 	private static TextView currentSong;
 	private static TextView currentArtist;
-	private static TextView currentGenre;
 
 	private static SeekBar seekBar;
 	private static Handler seekHandler = new Handler();
@@ -85,9 +89,19 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 	}
 
 	private void setSong(Song song) {
+		MediaMetadataRetriever metaRetriver = new MediaMetadataRetriever();
+		metaRetriver.setDataSource(song.getFileName());
+		byte[] picture = metaRetriver.getEmbeddedPicture();
+		if (picture != null) {
+			Bitmap songImage = BitmapFactory.decodeByteArray(picture, 0,
+					picture.length);
+			coverArt.setImageBitmap(songImage);
+		} else {
+			coverArt.setImageResource(R.drawable.ic_default_cover_art);
+		}
+
 		currentSong.setText(song.getTag().title);
 		currentArtist.setText("{" + song.getTag().artist + "}");
-		currentGenre.setText("[[" + song.getTag().genre + "]]");
 
 		seekBar.setProgress(musicPlayer.getMediaPlayer().getCurrentPosition());
 		seekBar.setMax(musicPlayer.getMediaPlayer().getDuration());
@@ -106,9 +120,9 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 
 		seekBar = (SeekBar) rootView.findViewById(R.id.seekBar);
 
+		coverArt = (ImageView) rootView.findViewById(R.id.coverArt);
 		currentSong = (TextView) rootView.findViewById(R.id.currentSong);
 		currentArtist = (TextView) rootView.findViewById(R.id.currentArtist);
-		currentGenre = (TextView) rootView.findViewById(R.id.currentGenre);
 	}
 
 	private void registerListeners() {
