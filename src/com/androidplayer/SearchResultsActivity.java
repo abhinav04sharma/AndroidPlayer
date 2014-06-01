@@ -27,7 +27,8 @@ public class SearchResultsActivity extends Activity {
 	private static SongListAdapter adapter;
 	private static LinkedList<Song> searchList;
 
-	private static MusicPlayer musicPlayer;
+	private static MusicPlayerServiceProvider musicPlayerServiceProvider;
+	private static MusicPlayerService musicPlayerService;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -36,7 +37,11 @@ public class SearchResultsActivity extends Activity {
 		ActionBar actionBar = getActionBar();
 		actionBar.setDisplayHomeAsUpEnabled(true);
 
-		musicPlayer = MusicPlayer.getInstance(this);
+		musicPlayerServiceProvider = new MusicPlayerServiceProvider(
+				SearchResultsActivity.this);
+		musicPlayerServiceProvider.doBindService();
+		musicPlayerService = musicPlayerServiceProvider.getMusicPlayerService();
+
 		searchList = new LinkedList<Song>();
 
 		listView = (ListView) findViewById(R.id.searchList);
@@ -45,9 +50,9 @@ public class SearchResultsActivity extends Activity {
 			public void onItemClick(AdapterView<?> parent, View view,
 					int position, long id) {
 				Song itemValue = (Song) listView.getItemAtPosition(position);
-				musicPlayer.setCurrent(itemValue);
+				musicPlayerService.setCurrent(itemValue);
 				try {
-					musicPlayer.playSong(itemValue, true);
+					musicPlayerService.playSong(itemValue, true);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -59,6 +64,7 @@ public class SearchResultsActivity extends Activity {
 
 	@Override
 	protected void onDestroy() {
+		musicPlayerServiceProvider.doUnbindService();
 		super.onDestroy();
 	}
 
@@ -71,7 +77,7 @@ public class SearchResultsActivity extends Activity {
 	private void handleIntent(Intent intent) {
 		if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
 			String search = intent.getStringExtra(SearchManager.QUERY);
-			List<Song> list = musicPlayer.getSongs();
+			List<Song> list = musicPlayerService.getSongs();
 			for (Song s : list) {
 				String concat = s.getTag().title + "\t" + s.getTag().artist
 						+ "\t" + s.getTag().album;

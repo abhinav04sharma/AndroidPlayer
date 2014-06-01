@@ -18,7 +18,8 @@ import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
 
-import com.androidplayer.MusicPlayer;
+import com.androidplayer.MusicPlayerService;
+import com.androidplayer.MusicPlayerServiceProvider;
 import com.androidplayer.R;
 
 public class NowPlayingFragment extends Fragment implements FragmentInterface {
@@ -35,14 +36,15 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 	private static Handler seekHandler = new Handler();
 	private static Runnable run;
 
-	private static MusicPlayer musicPlayer = null;
+	private static MusicPlayerServiceProvider musicPlayerServiceProvider;
+	private static MusicPlayerService musicPlayerService;
 
 	private View rootView;
 	private BroadcastReceiver broadCastReveiver = new BroadcastReceiver() {
 		@Override
 		public void onReceive(Context context, Intent intent) {
 			setSong((Song) intent
-					.getSerializableExtra(MusicPlayer.CURRENT_SONG));
+					.getSerializableExtra(MusicPlayerService.CURRENT_SONG));
 		}
 	};
 
@@ -53,9 +55,13 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 		LocalBroadcastManager
 				.getInstance(getActivity().getApplicationContext())
 				.registerReceiver(broadCastReveiver,
-						new IntentFilter(MusicPlayer.META_CHANGED));
-		musicPlayer = MusicPlayer.getInstance(getActivity()
-				.getApplicationContext());
+						new IntentFilter(MusicPlayerService.META_CHANGED));
+
+		musicPlayerServiceProvider = new MusicPlayerServiceProvider(
+				getActivity());
+		musicPlayerServiceProvider.doBindService();
+		musicPlayerService = musicPlayerServiceProvider.getMusicPlayerService();
+
 		createView();
 
 		return rootView;
@@ -66,6 +72,7 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 		LocalBroadcastManager
 				.getInstance(getActivity().getApplicationContext())
 				.unregisterReceiver(broadCastReveiver);
+		musicPlayerServiceProvider.doUnbindService();
 		super.onDestroy();
 	}
 
@@ -89,10 +96,10 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 		currentArtist.setText("{" + song.getTag().artist + "}");
 		currentGenre.setText("[[" + song.getTag().genre + "]]");
 
-		seekBar.setProgress(musicPlayer.getMediaPlayer().getCurrentPosition());
-		seekBar.setMax(musicPlayer.getMediaPlayer().getDuration());
+		seekBar.setProgress(musicPlayerService.getMediaPlayer().getCurrentPosition());
+		seekBar.setMax(musicPlayerService.getMediaPlayer().getDuration());
 
-		if (!musicPlayer.isPlaying()) {
+		if (!musicPlayerService.isPlaying()) {
 			play.setImageResource(R.drawable.ic_action_play);
 		} else {
 			play.setImageResource(R.drawable.ic_action_pause);
@@ -117,8 +124,8 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 			@Override
 			public void onClick(View view) {
 				try {
-					musicPlayer.playSong(musicPlayer.getNext(),
-							musicPlayer.isPlaying());
+					musicPlayerService.playSong(musicPlayerService.getNext(),
+							musicPlayerService.isPlaying());
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -129,9 +136,9 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 
 			@Override
 			public void onClick(View view) {
-				Song prevSong = musicPlayer.getPrev();
+				Song prevSong = musicPlayerService.getPrev();
 				try {
-					musicPlayer.playSong(prevSong, musicPlayer.isPlaying());
+					musicPlayerService.playSong(prevSong, musicPlayerService.isPlaying());
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -142,11 +149,11 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 
 			@Override
 			public void onClick(View v) {
-				if (musicPlayer.isPlaying()) {
-					musicPlayer.pausePlayback();
+				if (musicPlayerService.isPlaying()) {
+					musicPlayerService.pausePlayback();
 					play.setImageResource(R.drawable.ic_action_play);
 				} else {
-					musicPlayer.startPlayback();
+					musicPlayerService.startPlayback();
 					play.setImageResource(R.drawable.ic_action_pause);
 				}
 			}
@@ -156,7 +163,7 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 
 			@Override
 			public void onStopTrackingTouch(SeekBar sb) {
-				musicPlayer.seek(sb.getProgress());
+				musicPlayerService.seek(sb.getProgress());
 			}
 
 			@Override
@@ -167,14 +174,14 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 			public void onProgressChanged(SeekBar sb, int progress,
 					boolean fromUser) {
 				if (fromUser) {
-					musicPlayer.seek(sb.getProgress());
+					musicPlayerService.seek(sb.getProgress());
 				}
 			}
 		});
 	}
 
 	private void seekUpdation() {
-		seekBar.setProgress(musicPlayer.getMediaPlayer().getCurrentPosition());
+		seekBar.setProgress(musicPlayerService.getMediaPlayer().getCurrentPosition());
 		seekHandler.postDelayed(run, 500);
 	}
 

@@ -18,6 +18,7 @@ import tags.Tag;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.Service;
 import android.appwidget.AppWidgetManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -33,6 +34,8 @@ import android.media.MediaPlayer.OnCompletionListener;
 import android.media.RemoteControlClient;
 import android.media.audiofx.AudioEffect;
 import android.net.Uri;
+import android.os.Binder;
+import android.os.IBinder;
 import android.provider.MediaStore;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
@@ -41,7 +44,7 @@ import android.widget.RemoteViews;
 
 import com.androidplayer.widgets.AndroidPlayerWidgetProvider;
 
-public class MusicPlayer extends BroadcastReceiver {
+public class MusicPlayerService extends Service {
 
 	private static final String TAG = "MusicPlayer";
 	private static final int NOTIFICATION_ID = 1001;
@@ -52,11 +55,6 @@ public class MusicPlayer extends BroadcastReceiver {
 
 	private static boolean wasPlaying;
 
-	private static MusicPlayer musicPlayer;
-	private static int numClients;
-
-	private final Context context;
-
 	private final List<Song> songs = new ArrayList<Song>();
 	private final List<String> artists = new ArrayList<String>();
 	private final List<String> genres = new ArrayList<String>();
@@ -64,10 +62,10 @@ public class MusicPlayer extends BroadcastReceiver {
 	public final SongFactory songFactory = new SongFactory();
 	public final MediaPlayer player = new MediaPlayer();
 
-	private final ComponentName mediaButtonReceiverComponent;
+	private ComponentName mediaButtonReceiverComponent;
 	private RemoteControlClientCompat remoteControlClientCompat;
 
-	private final RemoteViews notificationView;
+	private RemoteViews notificationView;
 	private boolean isNotificationCreated;
 
 	private final NoisyAudioStreamReceiver noisyAudioStreamReceiver = new NoisyAudioStreamReceiver();
@@ -75,8 +73,7 @@ public class MusicPlayer extends BroadcastReceiver {
 	private final OnAudioFocusChangeListener audioFocusListener = new OnAudioFocusChangeListener() {
 
 		public void onAudioFocusChange(int focusChange) {
-			AudioManager am = (AudioManager) context
-					.getSystemService(Context.AUDIO_SERVICE);
+			AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
 			if (focusChange != AudioManager.AUDIOFOCUS_GAIN)
 				wasPlaying = isPlaying();
@@ -92,7 +89,8 @@ public class MusicPlayer extends BroadcastReceiver {
 
 			case (AudioManager.AUDIOFOCUS_LOSS):
 				pausePlayback();
-				ComponentName component = new ComponentName(context,
+				ComponentName component = new ComponentName(
+						MusicPlayerService.this,
 						RemoteControlBroadcastReceiver.class);
 				am.unregisterMediaButtonEventReceiver(component);
 				break;
@@ -108,35 +106,6 @@ public class MusicPlayer extends BroadcastReceiver {
 			}
 		}
 	};
-
-	public static synchronized MusicPlayer getInstance(Context context) {
-		if (musicPlayer == null) {
-			musicPlayer = new MusicPlayer(context);
-			musicPlayer.initialize();
-			musicPlayer.initializeWidgets();
-
-			try {
-				musicPlayer.playSong(musicPlayer.getCurrentSong(), false);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-
-			return musicPlayer;
-		}
-		++numClients;
-		// send a song change request each time the music player is initialized
-		musicPlayer.sendMetaChangedRequest();
-		return musicPlayer;
-	}
-
-	// TODO: figure out when to call this
-	public static synchronized void revokeInstance() {
-		--numClients;
-		if (numClients == 0) {
-			musicPlayer.finalize();
-			musicPlayer = null;
-		}
-	}
 
 	public List<Song> getSongs() {
 		return songFactory.getSongs();
@@ -204,14 +173,6 @@ public class MusicPlayer extends BroadcastReceiver {
 		return player;
 	}
 
-	private MusicPlayer(Context context) {
-		this.context = context;
-		mediaButtonReceiverComponent = new ComponentName(context,
-				RemoteControlBroadcastReceiver.class);
-		notificationView = new RemoteViews(context.getPackageName(),
-				R.layout.notification_template);
-	}
-
 	private String getURLFileName(String filename) {
 		try {
 			return URIUtil.encodeQuery("file:///" + filename);
@@ -245,7 +206,7 @@ public class MusicPlayer extends BroadcastReceiver {
 		String[] genresProjection = { MediaStore.Audio.Genres.NAME,
 				MediaStore.Audio.Genres._ID };
 
-		mediaCursor = context.getContentResolver().query(
+		mediaCursor = getContentResolver().query(
 				MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, mediaProjection,
 				MediaStore.Audio.Media.IS_MUSIC + " != 0", null, null);
 
@@ -269,7 +230,7 @@ public class MusicPlayer extends BroadcastReceiver {
 				Uri uri = MediaStore.Audio.Genres.getContentUriForAudioId(
 						"external", musicId);
 
-				genresCursor = context.getContentResolver().query(uri,
+				genresCursor = getContentResolver().query(uri,
 						genresProjection, null, null, null);
 
 				if (genresCursor.moveToFirst()) {
@@ -352,7 +313,7 @@ public class MusicPlayer extends BroadcastReceiver {
 		Intent intent = new Intent(META_CHANGED);
 		intent.putExtra(CURRENT_SONG, getCurrentSong());
 		intent.putExtra(IS_PLAYING, isPlaying());
-		LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
+		LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
 		// update remote client
 		updateRemoteClientMetaData();
 		// update notification view
@@ -365,8 +326,8 @@ public class MusicPlayer extends BroadcastReceiver {
 		audioEffectsIntent.putExtra(AudioEffect.EXTRA_AUDIO_SESSION,
 				player.getAudioSessionId());
 		audioEffectsIntent.putExtra(AudioEffect.EXTRA_PACKAGE_NAME,
-				context.getPackageName());
-		context.sendBroadcast(audioEffectsIntent);
+				getPackageName());
+		sendBroadcast(audioEffectsIntent);
 	}
 
 	private void unRegisterEquilizer() {
@@ -375,25 +336,23 @@ public class MusicPlayer extends BroadcastReceiver {
 		audioEffectsIntent.putExtra(AudioEffect.EXTRA_AUDIO_SESSION,
 				player.getAudioSessionId());
 		audioEffectsIntent.putExtra(AudioEffect.EXTRA_PACKAGE_NAME,
-				context.getPackageName());
-		context.sendBroadcast(audioEffectsIntent);
+				getPackageName());
+		sendBroadcast(audioEffectsIntent);
 	}
 
 	private void initializeWidgets() {
-		AppWidgetManager appWidgetManager = AppWidgetManager
-				.getInstance(context);
+		AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(this);
 		int[] appWidgetIds = appWidgetManager
-				.getAppWidgetIds(new ComponentName(context,
+				.getAppWidgetIds(new ComponentName(this,
 						AndroidPlayerWidgetProvider.class));
 		if (appWidgetIds.length > 0) {
-			new AndroidPlayerWidgetProvider().onUpdate(context,
-					appWidgetManager, appWidgetIds);
+			new AndroidPlayerWidgetProvider().onUpdate(this, appWidgetManager,
+					appWidgetIds);
 		}
 	}
 
 	private boolean getAudioFocus() {
-		AudioManager am = (AudioManager) context
-				.getSystemService(Context.AUDIO_SERVICE);
+		AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 		int result = am.requestAudioFocus(audioFocusListener,
 				AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
 		if (result != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
@@ -405,12 +364,11 @@ public class MusicPlayer extends BroadcastReceiver {
 	}
 
 	private void registerRemoteClient() {
-		AudioManager am = (AudioManager) context
-				.getSystemService(Context.AUDIO_SERVICE);
+		AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 		final Intent mediaButtonIntent = new Intent(Intent.ACTION_MEDIA_BUTTON);
 		mediaButtonIntent.setComponent(mediaButtonReceiverComponent);
 		remoteControlClientCompat = new RemoteControlClientCompat(
-				PendingIntent.getBroadcast(context, 0, mediaButtonIntent, 0));
+				PendingIntent.getBroadcast(this, 0, mediaButtonIntent, 0));
 		RemoteControlHelper.registerRemoteControlClient(am,
 				remoteControlClientCompat);
 		final int flags = RemoteControlClient.FLAG_KEY_MEDIA_PREVIOUS
@@ -445,8 +403,7 @@ public class MusicPlayer extends BroadcastReceiver {
 
 	private void unRegisterRemoteClient() {
 		try {
-			AudioManager audioManager = (AudioManager) context
-					.getSystemService(Context.AUDIO_SERVICE);
+			AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 			RemoteControlHelper.unregisterRemoteControlClient(audioManager,
 					remoteControlClientCompat);
 		} catch (Exception e) {
@@ -470,11 +427,11 @@ public class MusicPlayer extends BroadcastReceiver {
 	private void registerAudioJackListener() {
 		IntentFilter noiseFilter = new IntentFilter(
 				AudioManager.ACTION_AUDIO_BECOMING_NOISY);
-		context.registerReceiver(noisyAudioStreamReceiver, noiseFilter);
+		registerReceiver(noisyAudioStreamReceiver, noiseFilter);
 	}
 
 	private void unRegisterAudioJackListener() {
-		context.unregisterReceiver(noisyAudioStreamReceiver);
+		unregisterReceiver(noisyAudioStreamReceiver);
 	}
 
 	private static final String PLAY_PAUSE_INTENT = "com.androidplayer.MusicPlayer.INTENT.PlayPause";
@@ -494,28 +451,28 @@ public class MusicPlayer extends BroadcastReceiver {
 		intentFilter.addAction(PLAY_PAUSE_INTENT);
 		intentFilter.addAction(COLLAPSE_INTENT);
 
-		context.registerReceiver(this, intentFilter);
+		registerReceiver(intentReciever, intentFilter);
 
 		Intent action = new Intent(PLAY_PAUSE_INTENT);
-		PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0,
+		PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0,
 				action, PendingIntent.FLAG_CANCEL_CURRENT);
 		notificationView.setOnClickPendingIntent(R.id.notification_base_play,
 				pendingIntent);
 
 		action = new Intent(PREV_INTENT);
-		pendingIntent = PendingIntent.getBroadcast(context, 0, action,
+		pendingIntent = PendingIntent.getBroadcast(this, 0, action,
 				PendingIntent.FLAG_CANCEL_CURRENT);
 		notificationView.setOnClickPendingIntent(
 				R.id.notification_base_previous, pendingIntent);
 
 		action = new Intent(NEXT_INTENT);
-		pendingIntent = PendingIntent.getBroadcast(context, 0, action,
+		pendingIntent = PendingIntent.getBroadcast(this, 0, action,
 				PendingIntent.FLAG_CANCEL_CURRENT);
 		notificationView.setOnClickPendingIntent(R.id.notification_base_next,
 				pendingIntent);
 
 		action = new Intent(COLLAPSE_INTENT);
-		pendingIntent = PendingIntent.getBroadcast(context, 0, action,
+		pendingIntent = PendingIntent.getBroadcast(this, 0, action,
 				PendingIntent.FLAG_CANCEL_CURRENT);
 		notificationView.setOnClickPendingIntent(
 				R.id.notification_base_collapse, pendingIntent);
@@ -527,9 +484,8 @@ public class MusicPlayer extends BroadcastReceiver {
 		if (!isNotificationCreated) {
 			return;
 		}
-		context.unregisterReceiver(this);
-		NotificationManager mNotificationManager = (NotificationManager) context
-				.getSystemService(Context.NOTIFICATION_SERVICE);
+		unregisterReceiver(intentReciever);
+		NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 		mNotificationManager.cancel(NOTIFICATION_ID);
 		isNotificationCreated = false;
 	}
@@ -539,42 +495,89 @@ public class MusicPlayer extends BroadcastReceiver {
 			return;
 		}
 		notificationView.setTextViewText(R.id.notification_base_line_one,
-				musicPlayer.getCurrentSong().getTag().title);
+				getCurrentSong().getTag().title);
 		notificationView.setTextViewText(R.id.notification_base_line_two,
-				musicPlayer.getCurrentSong().getTag().artist);
+				getCurrentSong().getTag().artist);
 
 		NotificationCompat.Builder builder = new NotificationCompat.Builder(
-				context).setSmallIcon(R.drawable.ic_launcher).setContent(
+				this).setSmallIcon(R.drawable.ic_launcher).setContent(
 				notificationView);
-		NotificationManager notificationManager = (NotificationManager) context
-				.getSystemService(Context.NOTIFICATION_SERVICE);
+		NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 		Notification notification = builder.build();
 		notification.flags |= Notification.FLAG_NO_CLEAR;
 		notificationManager.notify(NOTIFICATION_ID, notification);
 	}
 
-	@Override
-	public void onReceive(Context context, Intent intent) {
-		if (PLAY_PAUSE_INTENT.equals(intent.getAction())) {
-			if (isPlaying())
+	BroadcastReceiver intentReciever = new BroadcastReceiver() {
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			if (PLAY_PAUSE_INTENT.equals(intent.getAction())) {
+				if (isPlaying())
+					pausePlayback();
+				else
+					startPlayback();
+			} else if (PREV_INTENT.equals(intent.getAction())) {
+				try {
+					playSong(getPrev(), isPlaying());
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			} else if (NEXT_INTENT.equals(intent.getAction())) {
+				try {
+					playSong(getNext(), isPlaying());
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			} else if (COLLAPSE_INTENT.equals(intent.getAction())) {
 				pausePlayback();
-			else
-				startPlayback();
-		} else if (PREV_INTENT.equals(intent.getAction())) {
-			try {
-				playSong(getPrev(), isPlaying());
-			} catch (Exception e) {
-				e.printStackTrace();
+				closeNotification();
 			}
-		} else if (NEXT_INTENT.equals(intent.getAction())) {
-			try {
-				playSong(getNext(), isPlaying());
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		} else if (COLLAPSE_INTENT.equals(intent.getAction())) {
-			pausePlayback();
-			closeNotification();
 		}
+	};
+
+	// Service specific stuff (Local service)
+
+	public class MusicPlayerBinder extends Binder {
+		MusicPlayerService getService() {
+			return MusicPlayerService.this;
+		}
+	}
+
+	private final IBinder binder = new MusicPlayerBinder();
+
+	@Override
+	public void onCreate() {
+		super.onCreate();
+		this.mediaButtonReceiverComponent = new ComponentName(this,
+				RemoteControlBroadcastReceiver.class);
+		notificationView = new RemoteViews(getPackageName(),
+				R.layout.notification_template);
+		initialize();
+		initializeWidgets();
+
+		try {
+			playSong(getCurrentSong(), false);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		// send a song change request each time the music player is initialized
+		sendMetaChangedRequest();
+	}
+
+	@Override
+	public void onDestroy() {
+		finalize();
+		super.onDestroy();
+	}
+
+	@Override
+	public int onStartCommand(Intent intent, int flags, int startId) {
+		return START_STICKY;
+	}
+
+	@Override
+	public IBinder onBind(Intent intent) {
+		return binder;
 	}
 }

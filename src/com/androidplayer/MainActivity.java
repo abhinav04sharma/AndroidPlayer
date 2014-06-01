@@ -23,11 +23,17 @@ public class MainActivity extends FragmentActivity implements TabListener {
 	private ActionBar actionBar;
 	private String[] tabs = { "Now Playing", "All Songs", "Mood List",
 			"Artists", "Albums", "Genres" };
+	private MusicPlayerServiceProvider musicPlayerServiceProvider = new MusicPlayerServiceProvider(
+			MainActivity.this);
+	private MusicPlayerService musicPlayerService;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+
+		musicPlayerServiceProvider.doBindService();
+		musicPlayerService = musicPlayerServiceProvider.getMusicPlayerService();
 
 		viewPager = (ViewPager) findViewById(R.id.pager);
 		actionBar = getActionBar();
@@ -98,18 +104,19 @@ public class MainActivity extends FragmentActivity implements TabListener {
 
 	@Override
 	protected void onPause() {
-		MusicPlayer.getInstance(this).createNotification();
+		musicPlayerService.createNotification();
 		super.onPause();
 	}
 
 	@Override
 	protected void onResume() {
-		MusicPlayer.getInstance(this).closeNotification();
+		musicPlayerService.closeNotification();
 		super.onResume();
 	}
 
 	@Override
 	protected void onDestroy() {
+		musicPlayerServiceProvider.doUnbindService();
 		super.onDestroy();
 	}
 

@@ -14,7 +14,8 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ListView;
 
-import com.androidplayer.MusicPlayer;
+import com.androidplayer.MusicPlayerService;
+import com.androidplayer.MusicPlayerServiceProvider;
 import com.androidplayer.R;
 import com.androidplayer.SearchResultsActivity;
 import com.androidplayer.adapters.StringListAdapter;
@@ -26,7 +27,8 @@ public class ArtitstListFragment extends Fragment implements FragmentInterface {
 	private static StringListAdapter adapter;
 	private static TreeMap<String, LinkedList<Song>> artistMap;
 
-	private static MusicPlayer musicPlayer;
+	private static MusicPlayerServiceProvider musicPlayerServiceProvider;
+	private static MusicPlayerService musicPlayerService;
 
 	private View rootView;
 
@@ -36,8 +38,12 @@ public class ArtitstListFragment extends Fragment implements FragmentInterface {
 
 		this.rootView = inflater.inflate(R.layout.listview_fragment, container,
 				false);
-		musicPlayer = MusicPlayer.getInstance(getActivity()
-				.getApplicationContext());
+
+		musicPlayerServiceProvider = new MusicPlayerServiceProvider(
+				getActivity());
+		musicPlayerServiceProvider.doBindService();
+		musicPlayerService = musicPlayerServiceProvider.getMusicPlayerService();
+
 		createView();
 		setRetainInstance(true);
 		return rootView;
@@ -45,6 +51,7 @@ public class ArtitstListFragment extends Fragment implements FragmentInterface {
 
 	@Override
 	public void onDestroy() {
+		musicPlayerServiceProvider.doUnbindService();
 		super.onDestroy();
 	}
 
@@ -85,7 +92,7 @@ public class ArtitstListFragment extends Fragment implements FragmentInterface {
 
 	private void constructList() {
 		artistMap = new TreeMap<String, LinkedList<Song>>();
-		for (Song song : musicPlayer.getSongs()) {
+		for (Song song : musicPlayerService.getSongs()) {
 			String artist = song.getTag().artist;
 			if (artist.length() > 0) {
 				LinkedList<Song> list = artistMap.get(artist);

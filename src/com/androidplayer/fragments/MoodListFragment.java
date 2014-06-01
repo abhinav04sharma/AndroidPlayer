@@ -12,7 +12,8 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ListView;
 
-import com.androidplayer.MusicPlayer;
+import com.androidplayer.MusicPlayerService;
+import com.androidplayer.MusicPlayerServiceProvider;
 import com.androidplayer.R;
 import com.androidplayer.adapters.SongListAdapter;
 
@@ -23,18 +24,22 @@ public class MoodListFragment extends Fragment implements FragmentInterface {
 	private static SongListAdapter adapter;
 	private static ArrayList<Song> list;
 
-	private static MusicPlayer musicPlayer;
+	private static MusicPlayerServiceProvider musicPlayerServiceProvider;
+	private static MusicPlayerService musicPlayerService;
 
 	private View rootView;
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
 			Bundle savedInstanceState) {
-
 		this.rootView = inflater.inflate(R.layout.listview_fragment, container,
 				false);
-		musicPlayer = MusicPlayer.getInstance(getActivity()
-				.getApplicationContext());
+
+		musicPlayerServiceProvider = new MusicPlayerServiceProvider(
+				getActivity());
+		musicPlayerServiceProvider.doBindService();
+		musicPlayerService = musicPlayerServiceProvider.getMusicPlayerService();
+
 		createView();
 		setRetainInstance(true);
 		return rootView;
@@ -42,6 +47,7 @@ public class MoodListFragment extends Fragment implements FragmentInterface {
 
 	@Override
 	public void onDestroy() {
+		musicPlayerServiceProvider.doUnbindService();
 		super.onDestroy();
 	}
 
@@ -68,9 +74,9 @@ public class MoodListFragment extends Fragment implements FragmentInterface {
 					int position, long id) {
 				// ListView Clicked item value
 				Song itemValue = (Song) listView.getItemAtPosition(position);
-				musicPlayer.setCurrent(itemValue);
+				musicPlayerService.setCurrent(itemValue);
 				try {
-					musicPlayer.playSong(itemValue, true);
+					musicPlayerService.playSong(itemValue, true);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -80,8 +86,8 @@ public class MoodListFragment extends Fragment implements FragmentInterface {
 	}
 
 	private void constructList() {
-		list = new ArrayList<Song>(musicPlayer.getSongs().size());
-		list.addAll(musicPlayer.getSongs().subList(0, 20));
+		list = new ArrayList<Song>(musicPlayerService.getSongs().size());
+		list.addAll(musicPlayerService.getSongs().subList(0, 20));
 	}
 
 }

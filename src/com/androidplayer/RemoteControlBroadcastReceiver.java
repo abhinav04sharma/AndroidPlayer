@@ -17,34 +17,38 @@ public class RemoteControlBroadcastReceiver extends BroadcastReceiver {
 		if (key.getAction() != KeyEvent.ACTION_DOWN)
 			return;
 
-		MusicPlayer musicPlayer = MusicPlayer.getInstance(context);
+		MusicPlayerServiceProvider musicPlayerServiceProvider = new MusicPlayerServiceProvider(
+				context);
+		musicPlayerServiceProvider.doBindService();
+		MusicPlayerService musicPlayerService = musicPlayerServiceProvider
+				.getMusicPlayerService();
 
 		switch (key.getKeyCode()) {
 		case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
-			if (musicPlayer.isPlaying()) {
-				musicPlayer.pausePlayback();
+			if (musicPlayerService.isPlaying()) {
+				musicPlayerService.pausePlayback();
 			} else {
-				musicPlayer.startPlayback();
+				musicPlayerService.startPlayback();
 			}
 			break;
 		case KeyEvent.KEYCODE_MEDIA_PLAY:
-			musicPlayer.startPlayback();
+			musicPlayerService.startPlayback();
 			break;
 		case KeyEvent.KEYCODE_MEDIA_PAUSE:
-			musicPlayer.pausePlayback();
+			musicPlayerService.pausePlayback();
 			break;
 		case KeyEvent.KEYCODE_MEDIA_NEXT:
 			try {
-				musicPlayer.playSong(musicPlayer.getNext(),
-						musicPlayer.isPlaying());
+				musicPlayerService.playSong(musicPlayerService.getNext(),
+						musicPlayerService.isPlaying());
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 			break;
 		case KeyEvent.KEYCODE_MEDIA_PREVIOUS:
 			try {
-				musicPlayer.playSong(musicPlayer.getPrev(),
-						musicPlayer.isPlaying());
+				musicPlayerService.playSong(musicPlayerService.getPrev(),
+						musicPlayerService.isPlaying());
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -56,5 +60,6 @@ public class RemoteControlBroadcastReceiver extends BroadcastReceiver {
 				e.printStackTrace();
 			}
 		}
+		musicPlayerServiceProvider.doUnbindService();
 	}
 }

@@ -13,12 +13,15 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.widget.RemoteViews;
 
 import com.androidplayer.MainActivity;
-import com.androidplayer.MusicPlayer;
+import com.androidplayer.MusicPlayerService;
+import com.androidplayer.MusicPlayerServiceProvider;
 import com.androidplayer.R;
 
 public class AndroidPlayerWidgetProvider extends AppWidgetProvider {
 
-	private static MusicPlayer musicPlayer = null;
+	private static MusicPlayerServiceProvider musicPlayerServiceProvider;
+	private static MusicPlayerService musicPlayerService;
+
 	public static final String ACTION_WIDGET_PLAY = "com.androidplayer.widgets.AndroidPlayerWidgetProvider.ActionWidgetPlay";
 	public static final String ACTION_WIDGET_SKIP = "com.androidplayer.widgets.AndroidPlayerWidgetProvider.ActionWidgetSkip";
 	public static final String ACTION_WIDGET_PREV = "com.androidplayer.widgets.AndroidPlayerWidgetProvider.ActionWidgetPrev";
@@ -27,7 +30,7 @@ public class AndroidPlayerWidgetProvider extends AppWidgetProvider {
 		@Override
 		public void onReceive(Context context, Intent intent) {
 			setSong((Song) intent
-					.getSerializableExtra(MusicPlayer.CURRENT_SONG),
+					.getSerializableExtra(MusicPlayerService.CURRENT_SONG),
 					context);
 		}
 	};
@@ -35,18 +38,20 @@ public class AndroidPlayerWidgetProvider extends AppWidgetProvider {
 	@Override
 	public void onUpdate(Context context, AppWidgetManager appWidgetManager,
 			int[] appWidgetIds) {
+		LocalBroadcastManager.getInstance(context).registerReceiver(
+				songChangedReceiver,
+				new IntentFilter(MusicPlayerService.META_CHANGED));
 
-		LocalBroadcastManager.getInstance(context)
-				.registerReceiver(songChangedReceiver,
-						new IntentFilter(MusicPlayer.META_CHANGED));
+		musicPlayerServiceProvider = new MusicPlayerServiceProvider(context);
+		musicPlayerServiceProvider.doBindService();
+		musicPlayerService = musicPlayerServiceProvider.getMusicPlayerService();
 
-		musicPlayer = MusicPlayer.getInstance(context.getApplicationContext());
 		RemoteViews remoteViews = new RemoteViews(context.getPackageName(),
 				R.layout.androidplayer_appwidget);
 		ComponentName watchWidget = new ComponentName(context,
 				AndroidPlayerWidgetProvider.class);
 
-		remoteViews.setTextViewText(R.id.widget_current_song, musicPlayer
+		remoteViews.setTextViewText(R.id.widget_current_song, musicPlayerService
 				.getCurrentSong().getTag().title);
 
 		Intent active = new Intent(context, AndroidPlayerWidgetProvider.class);
@@ -82,9 +87,9 @@ public class AndroidPlayerWidgetProvider extends AppWidgetProvider {
 	@Override
 	public void onEnabled(Context context) {
 		super.onEnabled(context);
-		LocalBroadcastManager.getInstance(context)
-				.registerReceiver(songChangedReceiver,
-						new IntentFilter(MusicPlayer.META_CHANGED));
+		LocalBroadcastManager.getInstance(context).registerReceiver(
+				songChangedReceiver,
+				new IntentFilter(MusicPlayerService.META_CHANGED));
 	}
 
 	@Override
@@ -96,21 +101,24 @@ public class AndroidPlayerWidgetProvider extends AppWidgetProvider {
 
 	@Override
 	public void onReceive(Context context, Intent intent) {
-		musicPlayer = MusicPlayer.getInstance(context.getApplicationContext());
+		musicPlayerServiceProvider = new MusicPlayerServiceProvider(context);
+		musicPlayerServiceProvider.doBindService();
+		musicPlayerService = musicPlayerServiceProvider.getMusicPlayerService();
+
 		try {
-			 if (intent.getAction().equals(ACTION_WIDGET_PLAY)) {
-				if (musicPlayer.isPlaying()) {
-					musicPlayer.pausePlayback();
+			if (intent.getAction().equals(ACTION_WIDGET_PLAY)) {
+				if (musicPlayerService.isPlaying()) {
+					musicPlayerService.pausePlayback();
 				} else {
-					musicPlayer.startPlayback();
-					musicPlayer.createNotification();
+					musicPlayerService.startPlayback();
+					musicPlayerService.createNotification();
 				}
 			} else if (intent.getAction().equals(ACTION_WIDGET_SKIP)) {
-				musicPlayer.playSong(musicPlayer.getNext(),
-						musicPlayer.isPlaying());
+				musicPlayerService.playSong(musicPlayerService.getNext(),
+						musicPlayerService.isPlaying());
 			} else if (intent.getAction().equals(ACTION_WIDGET_PREV)) {
-				musicPlayer.playSong(musicPlayer.getPrev(),
-						musicPlayer.isPlaying());
+				musicPlayerService.playSong(musicPlayerService.getPrev(),
+						musicPlayerService.isPlaying());
 			} else {
 				super.onReceive(context, intent);
 			}
@@ -126,7 +134,7 @@ public class AndroidPlayerWidgetProvider extends AppWidgetProvider {
 				AndroidPlayerWidgetProvider.class);
 		views.setTextViewText(R.id.widget_current_song, song.getTag().title);
 
-		if (musicPlayer.isPlaying()) {
+		if (musicPlayerService.isPlaying()) {
 			views.setImageViewResource(R.id.widget_play,
 					R.drawable.ic_action_pause);
 		} else {
