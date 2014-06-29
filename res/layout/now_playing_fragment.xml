@@ -10,7 +10,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_above="@+id/skip"
-        android:layout_centerHorizontal="true"
+        android:layout_alignLeft="@+id/prev"
+        android:layout_alignRight="@+id/skip"
         android:layout_marginBottom="18dp" />
 
     <ImageButton
@@ -24,35 +25,13 @@
         android:contentDescription="@string/play"
         android:src="@drawable/ic_action_play" />
 
-    <ImageButton
-        android:id="@+id/skip"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentRight="true"
-        android:layout_marginBottom="33dp"
-        android:layout_marginRight="30dp"
-        android:background="@null"
-        android:contentDescription="@string/skip"
-        android:src="@drawable/ic_action_next" />
-
-    <ImageButton
-        android:id="@+id/prev"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
-        android:layout_alignTop="@+id/play"
-        android:layout_marginLeft="30dp"
-        android:background="@null"
-        android:contentDescription="@string/prev"
-        android:src="@drawable/ic_action_previous" />
-
     <ImageView
         android:id="@+id/coverArt"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:layout_above="@+id/currentSong"
         android:layout_centerHorizontal="true"
+        android:layout_marginTop="15dp"
         android:layout_marginBottom="15dp"
         android:contentDescription="@string/default_cover_art"
         android:src="@drawable/ic_default_cover_art" />
@@ -63,7 +42,7 @@
         android:layout_height="wrap_content"
         android:layout_above="@+id/currentArtist"
         android:layout_centerHorizontal="true"
-        android:layout_marginBottom="15dp"
+        android:layout_marginBottom="10dp"
         android:ellipsize="marquee"
         android:focusable="true"
         android:focusableInTouchMode="true"
@@ -87,6 +66,47 @@
         android:scrollHorizontally="true"
         android:singleLine="true"
         android:text="@string/currentArtist"
+        android:textAppearance="?android:attr/textAppearanceSmall" />
+
+    <ImageButton
+        android:id="@+id/prev"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignTop="@+id/play"
+        android:layout_marginLeft="50dp"
+        android:background="@null"
+        android:contentDescription="@string/prev"
+        android:src="@drawable/ic_action_previous" />
+
+    <ImageButton
+        android:id="@+id/skip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginBottom="29dp"
+        android:layout_marginRight="50dp"
+        android:background="@null"
+        android:contentDescription="@string/skip"
+        android:src="@drawable/ic_action_next" />
+
+    <TextView
+        android:id="@+id/timeElasped"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/seekBar"
+        android:layout_toLeftOf="@+id/seekBar"
+        android:text="@string/zero_time"
+        android:textAppearance="?android:attr/textAppearanceSmall" />
+
+    <TextView
+        android:id="@+id/totalTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/seekBar"
+        android:layout_toRightOf="@+id/seekBar"
+        android:text="@string/zero_time"
         android:textAppearance="?android:attr/textAppearanceSmall" />
 
 </RelativeLayout>

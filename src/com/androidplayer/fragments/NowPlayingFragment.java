@@ -1,5 +1,10 @@
 package com.androidplayer.fragments;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
+
 import tags.Song;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -34,6 +39,9 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 	private static ImageView coverArt;
 	private static TextView currentSong;
 	private static TextView currentArtist;
+
+	private static TextView timeElasped;
+	private static TextView totalTime;
 
 	private static SeekBar seekBar;
 	private static Handler seekHandler = new Handler();
@@ -90,13 +98,17 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 
 	private void setSong(Song song) {
 		MediaMetadataRetriever metaRetriver = new MediaMetadataRetriever();
-		metaRetriver.setDataSource(song.getFileName());
-		byte[] picture = metaRetriver.getEmbeddedPicture();
-		if (picture != null) {
-			Bitmap songImage = BitmapFactory.decodeByteArray(picture, 0,
-					picture.length);
-			coverArt.setImageBitmap(songImage);
-		} else {
+		try {
+			metaRetriver.setDataSource(song.getFileName());
+			byte[] picture = metaRetriver.getEmbeddedPicture();
+			if (picture != null) {
+				Bitmap songImage = BitmapFactory.decodeByteArray(picture, 0,
+						picture.length);
+				coverArt.setImageBitmap(songImage);
+			} else {
+				throw new Exception();
+			}
+		} catch (Exception e) {
 			coverArt.setImageResource(R.drawable.ic_default_cover_art);
 		}
 
@@ -105,6 +117,14 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 
 		seekBar.setProgress(musicPlayer.getMediaPlayer().getCurrentPosition());
 		seekBar.setMax(musicPlayer.getMediaPlayer().getDuration());
+
+		SimpleDateFormat sdf = new SimpleDateFormat("mm:ss",
+				Locale.getDefault());
+		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+		timeElasped.setText(sdf.format(new Date(musicPlayer.getMediaPlayer()
+				.getCurrentPosition())));
+		totalTime.setText(sdf.format(new Date(musicPlayer.getMediaPlayer()
+				.getDuration())));
 
 		if (!musicPlayer.isPlaying()) {
 			play.setImageResource(R.drawable.ic_action_play);
@@ -123,6 +143,9 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 		coverArt = (ImageView) rootView.findViewById(R.id.coverArt);
 		currentSong = (TextView) rootView.findViewById(R.id.currentSong);
 		currentArtist = (TextView) rootView.findViewById(R.id.currentArtist);
+
+		timeElasped = (TextView) rootView.findViewById(R.id.timeElasped);
+		totalTime = (TextView) rootView.findViewById(R.id.totalTime);
 	}
 
 	private void registerListeners() {
@@ -189,6 +212,11 @@ public class NowPlayingFragment extends Fragment implements FragmentInterface {
 
 	private void seekUpdation() {
 		seekBar.setProgress(musicPlayer.getMediaPlayer().getCurrentPosition());
+		SimpleDateFormat sdf = new SimpleDateFormat("mm:ss",
+				Locale.getDefault());
+		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+		timeElasped.setText(sdf.format(new Date(musicPlayer.getMediaPlayer()
+				.getCurrentPosition())));
 		seekHandler.postDelayed(run, 500);
 	}
 

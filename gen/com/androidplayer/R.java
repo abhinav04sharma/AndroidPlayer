@@ -51,7 +51,7 @@ public final class R {
         public static final int ic_launcher=0x7f020007;
     }
     public static final class id {
-        public static final int action_search=0x7f0a001b;
+        public static final int action_search=0x7f0a001d;
         public static final int artist=0x7f0a000a;
         public static final int coverArt=0x7f0a0018;
         public static final int currentArtist=0x7f0a001a;
@@ -68,12 +68,14 @@ public final class R {
         public static final int notification_base_previous=0x7f0a000f;
         public static final int now_playing_fragment=0x7f0a0013;
         public static final int pager=0x7f0a0000;
-        public static final int play=0x7f0a0016;
-        public static final int prev=0x7f0a0017;
+        public static final int play=0x7f0a0017;
+        public static final int prev=0x7f0a0016;
         public static final int searchList=0x7f0a0001;
         public static final int seekBar=0x7f0a0014;
         public static final int skip=0x7f0a0015;
         public static final int song=0x7f0a0009;
+        public static final int timeElasped=0x7f0a001b;
+        public static final int totalTime=0x7f0a001c;
         public static final int widget=0x7f0a0002;
         public static final int widget_current_song=0x7f0a0006;
         public static final int widget_play=0x7f0a0003;
@@ -105,6 +107,7 @@ public final class R {
         public static final int prev=0x7f060007;
         public static final int search_hint=0x7f06000a;
         public static final int skip=0x7f060003;
+        public static final int zero_time=0x7f06000c;
     }
     public static final class style {
         /** 
